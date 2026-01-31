@@ -3,7 +3,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useErrorStore } from '@/store/useErrorStore';
 
 const api = axios.create({
-  baseURL: 'http://vt-tracker.test/api', // Assumed API path
+  baseURL: process.env.NEXT_PUBLIC_APP_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',

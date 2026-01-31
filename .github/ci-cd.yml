@@ -1,0 +1,61 @@
+name: Frontend CI/CD Pipeline
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  # ----------------------------------------------------------------------
+  # STAGE 1: Build Verification (CI)
+  # Ensure the app actually builds before we try to deploy it.
+  # ----------------------------------------------------------------------
+  build-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      - name: Install Dependencies
+        run: npm ci
+      - name: Linting
+        run: npm run lint
+      - name: Build Test
+        run: npm run build
+        env:
+          # Optimization: skips heavy type checking during simple build verification
+          NEXT_TELEMETRY_DISABLED: 1
+  # ----------------------------------------------------------------------
+  # STAGE 2: Deployment (CD)
+  # SSH into VPS and restart Docker container.
+  # ----------------------------------------------------------------------
+  deploy:
+    needs: build-check
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # Stop execution on error
+            set -e
+            echo "🚀 Starting Frontend Deployment..."
+            
+            # Navigate to your frontend directory on the server
+            # CHANGE THIS PATH to match where you cloned the frontend repo
+            cd /var/www/vt-tracker-frontend
+            # Pull latest changes
+            echo "📥 Pulling latest code..."
+            git pull origin main
+            # Rebuild and restart container
+            echo "🐳 Rebuilding frontend container..."
+            docker compose up -d --build
+            # Cleanup unused images to save disk space
+            docker image prune -f
+            echo "✅ Frontend Deployment Successful!"

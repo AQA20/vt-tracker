@@ -1,0 +1,7 @@
+services:
+  frontend:
+    build: .
+    container_name: nextjs_app
+    restart: always
+    ports:
+      - "3000:3000"
