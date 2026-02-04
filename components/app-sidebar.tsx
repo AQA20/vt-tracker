@@ -3,18 +3,13 @@
 import * as React from "react"
 import {
   LayoutDashboard,
-  FolderKanban,
   Construction,
   LogOut,
-  Users,
-  Settings2,
-  PieChart,
-  SquareTerminal,
-  Map,
   MoreHorizontal,
   Moon,
   Sun,
-  Laptop
+  Laptop,
+  FileText
 } from "lucide-react"
 
 import {
@@ -44,6 +39,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useAuthStore } from "@/store/useAuthStore"
 import { useTheme } from "next-themes"
+import Link from "next/link"
 import { usePathname } from "next/navigation"
 
 // This is sample data.
@@ -73,45 +69,11 @@ const data = {
           icon: LayoutDashboard,
         },
         {
-          title: "Analytics",
-          url: "/dashboard/analytics",
-          icon: PieChart,
-        },
+          title: "Engineering Submissions",
+          url: "/dashboard/engineering-submissions",
+          icon: FileText,
+        }
       ],
-    },
-    {
-      title: "Projects",
-      url: "/dashboard/projects",
-      icon: FolderKanban,
-      items: [
-        {
-          title: "All Projects",
-          url: "/dashboard/projects",
-          icon: Map,
-        },
-        {
-          title: "Create New",
-          url: "/dashboard/projects/new",
-          icon: SquareTerminal,
-        },
-      ],
-    },
-    {
-        title: "Management",
-        url: "#",
-        icon: Users,
-        items: [
-            {
-                title: "Users",
-                url: "/dashboard/users",
-                icon: Users,
-            },
-            {
-                title: "Roles",
-                url: "/dashboard/roles",
-                icon: Settings2,
-            }
-        ]
     }
   ],
 }
@@ -161,11 +123,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               {group.items?.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton 
+                    asChild
                     tooltip={item.title} 
                     isActive={pathname === item.url}
                   >
+                    <Link href={item.url}>
                       {item.icon && <item.icon />}
                       <span className="group-data-[collapsible=icon]:!hidden">{item.title}</span>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}

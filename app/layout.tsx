@@ -19,6 +19,8 @@ export const metadata: Metadata = {
   description: "VT Tracker - Management System",
 };
 
+import { Toaster } from 'sonner';
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -37,6 +39,7 @@ export default function RootLayout({
         >
           <GlobalError />
           {children}
+          <Toaster position="top-right" richColors />
         </ThemeProvider>
       </body>
     </html>
