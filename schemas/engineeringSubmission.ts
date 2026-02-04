@@ -30,6 +30,8 @@ export const engineeringSubmissionSchema = z.object({
     ms3s_ksa_port: z.string().date().nullish().or(z.literal("")),
     ms2_3s: z.preprocess((v) => (v === "" || v === null ? undefined : v), z.coerce.number().optional()),
   }).optional(),
+  
+  files: z.record(z.string(), z.any()).optional(),
 });
 
 export type EngineeringSubmissionFormValues = z.infer<typeof engineeringSubmissionSchema> & {

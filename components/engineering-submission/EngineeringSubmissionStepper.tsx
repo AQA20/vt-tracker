@@ -20,6 +20,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { toast } from 'sonner';
 
 interface Props {
   initialData?: Partial<EngineeringSubmissionFormValues> & { id?: string };
@@ -47,6 +48,7 @@ export default function EngineeringSubmissionStepper({ initialData }: Props) {
       network_no: 0,
       status_update: {},
       dg1_milestone: {},
+      files: {},
       ...initialData
     },
     mode: 'onChange',
@@ -90,23 +92,7 @@ export default function EngineeringSubmissionStepper({ initialData }: Props) {
         return;
       }
 
-      // AUTO-SAVE: If we're in "Create" mode and haven't saved yet, save now to get an ID for PDFs
-      if (!createdId) {
-        setIsSubmitting(true);
-        try {
-          const jsonData = sanitizeData(currentData);
-          const response = await createSubmission(jsonData);
-          const newId = response.data.data?.id || response.data.id;
-          setCreatedId(newId);
-          console.log('Auto-created submission. ID:', newId);
-        } catch (error) {
-          console.error('Auto-save failed:', error);
-          // Don't alerts here if handled by global error store, but we need to stop navigation
-          return;
-        } finally {
-          setIsSubmitting(false);
-        }
-      }
+      // Removed auto-save block to ensure submission only happens on final step
     } else if (currentStep === 1) {
       isValid = true; 
     } else {
@@ -137,12 +123,13 @@ export default function EngineeringSubmissionStepper({ initialData }: Props) {
         return;
     }
 
-    console.log('Submitting form with data:', data);
+    console.log('Submitting form with data keys:', Object.keys(data));
+    console.log('Raw form values debug:', methods.getValues().files ? 'files present' : 'files missing');
     setIsSubmitting(true);
     try {
       const jsonData = sanitizeData(data);
-      const files = data.files;
-      
+      const files = data.files || {};
+      console.log('Extracted files count:', Object.keys(files).length);
       let submissionIdValue = createdId || initialData?.id;
       
       if (submissionIdValue) {
@@ -151,16 +138,24 @@ export default function EngineeringSubmissionStepper({ initialData }: Props) {
       } else {
         console.log('Creating submission...');
         const response = await createSubmission(jsonData);
-        submissionIdValue = response.data.data?.id || response.data.id;
+        // Robust ID extraction from common Laravel patterns
+        submissionIdValue = response.data?.id || response.data?.data?.id;
+        
+        if (!submissionIdValue && response.data?.data) {
+           submissionIdValue = (typeof response.data.data === 'string' || typeof response.data.data === 'number') 
+             ? response.data.data 
+             : response.data.data.id;
+        }
       }
 
-      console.log('JSON Data submitted successfully. ID:', submissionIdValue);
+      console.log('Final Submission ID for files:', submissionIdValue);
 
-      if (submissionIdValue && files) {
+      if (submissionIdValue && files && Object.keys(files).length > 0) {
+        console.log('Initiating file uploads for ID:', submissionIdValue);
         const uploadPromises = Object.entries(files).map(async ([key, file]) => {
           if (file instanceof File) {
-             const fieldName = key; // Use the key as is (e.g., tech_sub_status_pdf)
-             console.log('Uploading file for field:', fieldName);
+             const fieldName = key;
+             console.log(`Uploading ${fieldName} (${file.name})...`);
              await uploadStatusPdf(submissionIdValue!.toString(), fieldName, file);
           }
         });
@@ -169,6 +164,7 @@ export default function EngineeringSubmissionStepper({ initialData }: Props) {
         console.log('All files uploaded successfully.');
       }
 
+      toast.success(initialData?.id ? 'Submission updated successfully!' : 'Submission created successfully!');
       router.push('/dashboard/engineering-submissions');
       router.refresh();
 
@@ -277,7 +273,15 @@ export default function EngineeringSubmissionStepper({ initialData }: Props) {
                     <Button 
                         type="button" 
                         disabled={isSubmitting}
-                        onClick={() => methods.handleSubmit(onSubmit)()}
+                        onClick={() => {
+                          methods.handleSubmit(
+                            onSubmit,
+                            (errors) => {
+                              console.error('Validation errors on submit:', errors);
+                              setValidationError('Please fix the errors in the form before submitting.');
+                            }
+                          )();
+                        }}
                         className="cursor-pointer"
                     >
                         {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

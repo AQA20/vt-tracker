@@ -32,8 +32,14 @@ interface StepStatusUpdatesProps {
 }
 
 export default function StepStatusUpdates({ onUploadFile }: StepStatusUpdatesProps) {
-  const { control, watch, setValue } = useFormContext<EngineeringSubmissionFormValues>();
+  const { control, watch, setValue, register } = useFormContext<EngineeringSubmissionFormValues>();
   const [uploadingFields, setUploadingFields] = React.useState<Record<string, boolean>>({});
+
+  React.useEffect(() => {
+    FIELDS.forEach(field => {
+        register(`files.${field.key}_pdf`);
+    });
+  }, [register]);
 
   const handleFileChange = async (fieldKey: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
