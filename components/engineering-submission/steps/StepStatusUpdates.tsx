@@ -29,9 +29,10 @@ const FIELDS = [
 
 interface StepStatusUpdatesProps {
   onUploadFile?: (fieldKey: string, file: File) => Promise<void>;
+  onDeleteFile?: (fieldKey: string) => Promise<void>;
 }
 
-export default function StepStatusUpdates({ onUploadFile }: StepStatusUpdatesProps) {
+export default function StepStatusUpdates({ onUploadFile, onDeleteFile }: StepStatusUpdatesProps) {
   const { control, watch, setValue, register } = useFormContext<EngineeringSubmissionFormValues>();
   const [uploadingFields, setUploadingFields] = React.useState<Record<string, boolean>>({});
 
@@ -62,8 +63,25 @@ export default function StepStatusUpdates({ onUploadFile }: StepStatusUpdatesPro
     }
   };
 
-  const handleRemoveFile = (fieldKey: string) => {
+  const handleRemoveFile = async (fieldKey: string) => {
+    // Clear local file state
     setValue(`files.${fieldKey}_pdf`, null);
+    
+    // Clear backend-provided path/url states so UI updates immediately
+    setValue(`status_update.${fieldKey}_pdf_path`, null);
+    setValue(`status_update.${fieldKey}_file_url`, null);
+
+    // If callback is provided (Edit Mode), trigger server-side deletion
+    if (onDeleteFile) {
+        setUploadingFields(prev => ({ ...prev, [fieldKey]: true }));
+        try {
+            await onDeleteFile(fieldKey);
+        } catch {
+            // Error handled by parent/toast
+        } finally {
+            setUploadingFields(prev => ({ ...prev, [fieldKey]: false }));
+        }
+    }
   };
 
   return (

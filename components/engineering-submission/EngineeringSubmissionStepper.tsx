@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useForm, FormProvider, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { engineeringSubmissionSchema, EngineeringSubmissionFormValues } from '@/schemas/engineeringSubmission';
-import { createSubmission, updateSubmission, uploadStatusPdf } from '@/services/engineeringSubmissionService';
+import { createSubmission, updateSubmission, uploadStatusPdf, deleteStatusPdf } from '@/services/engineeringSubmissionService';
 import { Button } from '@/components/ui/button';
 import StepCseDetails from './steps/StepCseDetails';
 import StepStatusUpdates from './steps/StepStatusUpdates';
@@ -193,6 +193,23 @@ export default function EngineeringSubmissionStepper({ initialData }: Props) {
     }
   };
 
+  const handleFieldFileDelete = async (fieldKey: string) => {
+    const id = createdId || initialData?.id;
+    if (!id) return;
+
+    console.log('Immediate delete triggered for:', fieldKey);
+    try {
+      const fieldName = `${fieldKey}_pdf`;
+      await deleteStatusPdf(id.toString(), fieldName);
+      console.log('Immediate delete success:', fieldName);
+      toast.success('File removed successfully');
+    } catch (error) {
+      console.error('Immediate delete failed:', error);
+      setValidationError(`Failed to delete ${fieldKey}. Please try again.`);
+      throw error;
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between mb-8">
@@ -249,6 +266,7 @@ export default function EngineeringSubmissionStepper({ initialData }: Props) {
                 {currentStep === 1 && (
                   <StepStatusUpdates 
                     onUploadFile={(createdId || initialData?.id) ? handleFieldFileUpload : undefined} 
+                    onDeleteFile={(createdId || initialData?.id) ? handleFieldFileDelete : undefined}
                   />
                 )}
                 {currentStep === 2 && <StepDg1Milestones />}
