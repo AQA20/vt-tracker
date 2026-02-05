@@ -6,6 +6,7 @@ import { EngineeringSubmissionFormValues } from '@/schemas/engineeringSubmission
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { FileUp, File as FileIcon, Trash2, Loader2 } from 'lucide-react';
 
@@ -114,21 +115,27 @@ interface StatusCardProps {
   onRemoveFile: () => void;
 }
 
+
+
 function StatusCard({ fieldKey, label, control, watch, isUploading, onFileChange, onRemoveFile }: StatusCardProps) {
   // Watch the file state to show UI updates
   const fileValue = watch(`files.${fieldKey}_pdf`);
   
   // Watch for existing file URL from backend data
-  // Assuming backend sends e.g. "tech_sub_status_pdf_path" or "tech_sub_status_pdf_url" 
-  // nested in status_update or flat. Based on schema it is likely nested or we access it flexibly.
-  // The User requirement said: "If pdf_url exists (Edit mode)".
-  // Let's assume the key is `{fieldKey}_pdf_path` inside `status_update`.
   const existingFileUrl = watch(`status_update.${fieldKey}_pdf_path`) || watch(`status_update.${fieldKey}_file_url`); 
+
+  // Watch for rejection count
+  const rejectionCount = watch(`status_update.${fieldKey.replace('_status', '')}_rejection_count`);
 
   return (
     <Card>
-      <CardHeader className="pb-3">
+      <CardHeader className="pb-3 flex flex-row items-center justify-between space-y-0">
         <CardTitle className="text-base font-medium">{label}</CardTitle>
+        {rejectionCount !== undefined && rejectionCount !== null && (
+           <Badge variant="destructive" className="h-5 py-0 px-2 text-[10px]">
+             Rejections: {rejectionCount}
+           </Badge>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">

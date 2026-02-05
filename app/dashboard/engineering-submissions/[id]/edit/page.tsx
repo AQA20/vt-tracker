@@ -70,7 +70,7 @@ export default function EditEngineeringSubmissionPage({ params }: { params: Prom
   }
 
   return (
-    <div className="container mx-auto py-10">
+    <div className="flex flex-col gap-6">
       <div className="flex items-center gap-4 mb-8">
         <Link href="/dashboard/engineering-submissions">
           <Button variant="ghost" size="icon" className="cursor-pointer">

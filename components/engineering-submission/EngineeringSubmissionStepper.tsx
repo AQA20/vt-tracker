@@ -80,8 +80,6 @@ export default function EngineeringSubmissionStepper({ initialData }: Props) {
 
   const handleNext = async () => {
     let isValid = false;
-    const currentData = methods.getValues();
-
     if (currentStep === 0) {
       const fields = ['asset_name', 'unit_id', 'material_code', 'equip_n', 'so_no', 'network_no'] as const;
       isValid = await trigger(fields);
