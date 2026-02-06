@@ -87,22 +87,22 @@ export default function ProjectUnitsPage({
                 <div className="grid grid-cols-2 gap-x-3 gap-y-2">
                   <div className="space-y-1">
                     <div className="flex justify-between text-[9px] font-bold uppercase text-muted-foreground/70">
-                      <span>Sub</span>
-                      <span>{catStats.submitted}%</span>
-                    </div>
-                    <Progress
-                      value={catStats.submitted}
-                      className="h-1 bg-blue-100 dark:bg-blue-900/30 [&>div]:bg-blue-500"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <div className="flex justify-between text-[9px] font-bold uppercase text-muted-foreground/70">
                       <span>Prog</span>
                       <span>{catStats.in_progress}%</span>
                     </div>
                     <Progress
                       value={catStats.in_progress}
                       className="h-1 bg-yellow-100 dark:bg-yellow-900/30 [&>div]:bg-yellow-500"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[9px] font-bold uppercase text-muted-foreground/70">
+                      <span>Sub</span>
+                      <span>{catStats.submitted}%</span>
+                    </div>
+                    <Progress
+                      value={catStats.submitted}
+                      className="h-1 bg-blue-100 dark:bg-blue-900/30 [&>div]:bg-blue-500"
                     />
                   </div>
                   <div className="space-y-1">
