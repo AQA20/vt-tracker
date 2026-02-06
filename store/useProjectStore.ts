@@ -8,8 +8,11 @@ interface ProjectState {
   units: Unit[];
   isLoading: boolean;
   error: string | null;
+  page: number;
+  totalPages: number;
+  perPage: number;
 
-  fetchProjects: () => Promise<void>;
+  fetchProjects: (page?: number) => Promise<void>;
   fetchProjectById: (id: string) => Promise<void>;
   createProject: (data: CreateProjectPayload) => Promise<void>;
   
@@ -31,13 +34,24 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   units: [],
   isLoading: false,
   error: null,
+  page: 1,
+  totalPages: 1,
+  perPage: 6,
 
-  fetchProjects: async () => {
+  fetchProjects: async (page = 1) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await api.get('/projects');
-      const data = response.data.data || response.data;
-      set({ projects: data || [] });
+      const response = await api.get('/projects', { params: { page, per_page: 6 } });
+      const responseData = response.data;
+      const data = responseData.data || (Array.isArray(responseData) ? responseData : []);
+      const meta = responseData.meta || {};
+      
+      set({ 
+        projects: data || [], 
+        page, 
+        totalPages: meta.last_page || (meta.lastPage ?? 1),
+        perPage: meta.per_page || (meta.perPage ?? 6)
+      });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to fetch projects';
       set({ error: message });
@@ -50,7 +64,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await api.get(`/projects/${id}`);
-      set({ currentProject: response.data });
+      const data = response.data.data || response.data;
+      set({ currentProject: data });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to fetch project';
       set({ error: message });
@@ -92,10 +107,17 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     }
   },
 
-  fetchUnitStages: async (unitId) => {
+  fetchUnitStages: async (unitId: string) => {
     try {
         const response = await api.get(`/units/${unitId}/stages`);
-        const stages = response.data;
+        // Handle Laravel resource wrapping
+        let stages = response.data.data || response.data;
+        
+        // Ensure stages is always an array
+        if (!Array.isArray(stages)) {
+            console.warn(`Stages for unit ${unitId} is not an array:`, stages);
+            stages = typeof stages === 'object' && stages !== null ? Object.values(stages) : [];
+        }
         
         set((state) => ({
             units: state.units.map(u => 
@@ -107,15 +129,22 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     }
   },
 
-  fetchStageTasks: async (stageId) => {
+  fetchStageTasks: async (stageId: string) => {
     try {
         const response = await api.get(`/stages/${stageId}/tasks`);
-        const tasks = response.data;
+        // Handle Laravel resource wrapping
+        let tasks = response.data.data || response.data;
+        
+        // Ensure tasks is always an array
+        if (!Array.isArray(tasks)) {
+            console.warn(`Tasks for stage ${stageId} is not an array:`, tasks);
+            tasks = typeof tasks === 'object' && tasks !== null ? Object.values(tasks) : [];
+        }
         
         set((state) => {
              // Find the unit that contains this stage
              const newUnits = state.units.map(unit => {
-                 if (!unit.stages) return unit;
+                 if (!unit.stages || !Array.isArray(unit.stages)) return unit;
                  const stageIndex = unit.stages.findIndex(s => s.id === stageId);
                  if (stageIndex === -1) return unit;
                  

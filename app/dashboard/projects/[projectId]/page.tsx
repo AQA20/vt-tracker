@@ -11,9 +11,9 @@ import { UnitsTable } from '@/components/modules/units-table';
 import { AddUnitModal } from '@/components/modules/add-unit-modal';
 import { BulkImportModal } from '@/components/modules/bulk-import-modal';
 
-export default function ProjectDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function ProjectDetailPage({ params }: { params: Promise<{ projectId: string }> }) {
   // Unwrap params using React.use()
-  const { id } = use(params);
+  const { projectId: id } = use(params);
   
   const { currentProject, fetchProjectById, fetchUnits, units, isLoading } = useProjectStore();
   const [isAddUnitOpen, setIsAddUnitOpen] = useState(false);

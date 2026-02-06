@@ -1,0 +1,637 @@
+'use client'
+
+import { useEffect, use, useState } from 'react'
+import { useProjectUnits } from '@/hooks/useProjectUnits'
+import { useProjectStore } from '@/store/useProjectStore'
+import { Button } from '@/components/ui/button'
+import {
+  ArrowLeft,
+  Loader2,
+  FileUp,
+  FileDown,
+  FileText,
+  Plus,
+} from 'lucide-react'
+import Link from 'next/link'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { STATUS_STATES } from '@/components/modules/engineering-submissions/constants'
+import { StatusUpdate, StatusApproval, StatusRevision } from '@/types'
+import {
+  updateStatusUpdate,
+  uploadStatusUpdatePdf,
+  updateStatusApproval,
+  createStatusApproval,
+  createStatusRevision,
+  updateStatusRevision,
+} from '@/services/engineeringSubmissionService'
+import { toast } from 'sonner'
+
+export default function EditUnitStatusPage({
+  params,
+}: {
+  params: Promise<{ projectId: string; unitId: string }>
+}) {
+  const { projectId, unitId } = use(params)
+  const { currentProject, fetchProjectById } = useProjectStore()
+  const { units, isLoading, fetchUnits } = useProjectUnits(projectId)
+  const [updatingId, setUpdatingId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (projectId) {
+      fetchProjectById(projectId)
+      fetchUnits()
+    }
+  }, [projectId, fetchProjectById, fetchUnits])
+
+  const unit = units.find((u) => u.id === unitId)
+
+  if (!unit || (!currentProject && isLoading)) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        {isLoading ? (
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        ) : (
+          <p>Unit not found</p>
+        )}
+      </div>
+    )
+  }
+
+  const handleStatusChange = async (
+    statusUpdateId: string,
+    newStatus: string,
+  ) => {
+    setUpdatingId(statusUpdateId)
+    try {
+      await updateStatusUpdate(statusUpdateId, newStatus)
+      toast.success('Status updated successfully')
+      fetchUnits() // Refresh data
+    } catch (error) {
+      console.error('Failed to update status', error)
+      toast.error('Failed to update status')
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  const handleFileUpload = async (statusUpdateId: string, file: File) => {
+    setUpdatingId(statusUpdateId)
+    try {
+      await uploadStatusUpdatePdf(statusUpdateId, file)
+      toast.success('PDF uploaded successfully')
+      fetchUnits()
+    } catch (error) {
+      console.error('Failed to upload PDF', error)
+      toast.error('Failed to upload PDF')
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  const handleApprovalDateChange = async (
+    approvalId: string,
+    newDate: string,
+  ) => {
+    if (!newDate) return
+    setUpdatingId(`approval-${approvalId}`)
+    try {
+      const formattedDateTime = `${newDate} 12:00:00`
+      await updateStatusApproval(approvalId, formattedDateTime)
+      toast.success('Approval date updated')
+      fetchUnits()
+    } catch (error) {
+      console.error('Failed to update approval date', error)
+      toast.error('Failed to update approval date')
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  const handleCreateApproval = async (
+    statusUpdateId: string,
+    approvalCode: string,
+  ) => {
+    setUpdatingId(`create-${statusUpdateId}-${approvalCode}`)
+    try {
+      const today = new Date().toISOString().split('T')[0]
+      const approvedAt = `${today} 12:00:00`
+      await createStatusApproval({
+        status_update_id: statusUpdateId,
+        approval_code: approvalCode,
+        approved_at: approvedAt,
+        comment: 'Initial approval',
+      })
+      toast.success(`Code ${approvalCode} approval added`)
+      fetchUnits()
+    } catch (error) {
+      console.error('Failed to create approval', error)
+      toast.error('Failed to create approval')
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  const handleCreateRevision = async (
+    statusUpdateId: string,
+    revisionNumber: number,
+  ) => {
+    setUpdatingId(`rev-create-${statusUpdateId}-${revisionNumber}`)
+    try {
+      const today = new Date().toISOString().split('T')[0]
+      const revisionDate = `${today} 12:00:00`
+      await createStatusRevision({
+        status_update_id: statusUpdateId,
+        revision_number: revisionNumber,
+        revision_date: revisionDate,
+        pdf_path: null,
+      })
+      toast.success(`REV${String(revisionNumber).padStart(2, '0')} added`)
+      fetchUnits()
+    } catch (error) {
+      console.error('Failed to create revision', error)
+      toast.error('Failed to create revision')
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  const handleRevisionDateChange = async (
+    revisionId: string,
+    newDate: string,
+  ) => {
+    if (!newDate) return
+    setUpdatingId(`rev-update-${revisionId}`)
+    try {
+      const formattedDate = `${newDate} 12:00:00`
+      await updateStatusRevision(revisionId, formattedDate)
+      toast.success('Revision date updated')
+      fetchUnits()
+    } catch (error) {
+      console.error('Failed to update revision date', error)
+      toast.error('Failed to update revision date')
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  const getCategoryLabel = (key: string) => {
+    const labels: Record<string, string> = {
+      tech: 'Tech Sub',
+      sample: 'Sample',
+      layout: 'Layout',
+      car_m_dwg: 'Car M DWG',
+      cop_dwg: 'COP DWG',
+      landing_dwg: 'Landing DWG',
+    }
+    return labels[key] || key
+  }
+
+  const formatDate = (dateValue: string | number | null | undefined) => {
+    if (!dateValue) return ''
+    try {
+      let date: Date
+
+      if (typeof dateValue === 'number') {
+        // If it's a timestamp in seconds (Unix), convert to ms
+        // 5000000000 is a safe threshold to distinguish between seconds and ms for next few decades
+        const timestamp = dateValue < 5000000000 ? dateValue * 1000 : dateValue
+        date = new Date(timestamp)
+      } else {
+        // Handle common backend formats where space might be used instead of 'T'
+        const normalized = dateValue.includes(' ')
+          ? dateValue.replace(' ', 'T')
+          : dateValue
+        date = new Date(normalized)
+
+        // If invalid, try parsing as number just in case it's a stringified timestamp
+        if (isNaN(date.getTime())) {
+          const num = Number(dateValue)
+          if (!isNaN(num)) {
+            const timestamp = num < 5000000000 ? num * 1000 : num
+            date = new Date(timestamp)
+          }
+        }
+      }
+
+      if (isNaN(date.getTime())) return ''
+      return date.toISOString().split('T')[0]
+    } catch (e) {
+      console.error('Date parsing error:', e)
+      return ''
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-8 pb-10 max-w-7xl">
+      <div className="flex items-center gap-4">
+        <Link href={`/dashboard/engineering-submissions/${projectId}/units`}>
+          <Button variant="ghost" size="icon">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+        </Link>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Edit Status: {unit.equipment_number}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {currentProject?.name} • {unit.unit_type}
+          </p>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {(() => {
+          let updates = unit.status_updates || unit.statusUpdates || []
+          if (updates && !Array.isArray(updates) && 'data' in updates) {
+            updates = updates.data
+          }
+
+          const updatesArray = (
+            Array.isArray(updates) ? updates : Object.values(updates || {})
+          ) as StatusUpdate[]
+
+          if (updatesArray.length === 0) return null
+
+          // Sort by stable category order
+          const CATEGORY_ORDER = [
+            'tech',
+            'sample',
+            'layout',
+            'car_m_dwg',
+            'cop_dwg',
+            'landing_dwg',
+          ]
+
+          // Use stable sort to prevent jumping
+          const sortedUpdates = [...updatesArray].sort(
+            (a: StatusUpdate, b: StatusUpdate) => {
+              const orderA = CATEGORY_ORDER.indexOf(a.category || '')
+              const orderB = CATEGORY_ORDER.indexOf(b.category || '')
+
+              // Primary sort by category order
+              const diff =
+                (orderA === -1 ? 999 : orderA) - (orderB === -1 ? 999 : orderB)
+              if (diff !== 0) return diff
+
+              // Secondary stable sort by ID
+              return String(a.id).localeCompare(String(b.id))
+            },
+          )
+
+          return sortedUpdates.map((update: StatusUpdate) => {
+            // PDF Logic
+            const isApproved = update.status === 'approved'
+            const isInProgress = update.status === 'in_progress'
+
+            let pdfPath = null
+            if (isApproved) {
+              const lastApproval =
+                update.approvals?.[update.approvals.length - 1]
+              if (
+                lastApproval &&
+                ['A', 'B'].includes(lastApproval.approval_code)
+              ) {
+                pdfPath = lastApproval.pdf_path
+              }
+            } else if (!isInProgress) {
+              const lastRevision =
+                update.revisions?.[update.revisions.length - 1]
+              pdfPath = lastRevision?.pdf_path
+            }
+
+            return (
+              <Card
+                key={update.id}
+                className="overflow-hidden border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col"
+              >
+                <CardHeader className="bg-zinc-50/50 dark:bg-zinc-900/50 py-3 border-b border-zinc-200 dark:border-zinc-800">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
+                      {getCategoryLabel(update.category || '')}
+                    </CardTitle>
+                    {updatingId === update.id && (
+                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="p-6 flex-1 flex flex-col gap-6">
+                  <div className="space-y-4">
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">Current Status</p>
+                      <p className="text-xs text-muted-foreground">
+                        Select the new category status.
+                      </p>
+                    </div>
+
+                    <div className="w-full">
+                      <Select
+                        defaultValue={update.status || ''}
+                        onValueChange={(value) =>
+                          handleStatusChange(update.id, value)
+                        }
+                        disabled={updatingId === update.id}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(STATUS_STATES).map(([key, label]) => (
+                            <SelectItem key={key} value={key}>
+                              {label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Approval Rows */}
+                  {update.status === 'approved' && (
+                    <div className="space-y-4 pt-2">
+                      {(() => {
+                        const hasCodeA = (update.approvals || []).some(
+                          (a: StatusApproval) => a.approval_code === 'A',
+                        )
+                        const hasCodeB = (update.approvals || []).some(
+                          (a: StatusApproval) => a.approval_code === 'B',
+                        )
+
+                        return (
+                          <div className="flex items-center justify-between border-b pb-1">
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                              Approval History
+                            </p>
+                            <div className="flex gap-1.5">
+                              {(!hasCodeA || !hasCodeB) && (
+                                <Select
+                                  onValueChange={(val) =>
+                                    handleCreateApproval(update.id, val)
+                                  }
+                                  disabled={
+                                    updatingId === `create-${update.id}-A` ||
+                                    updatingId === `create-${update.id}-B`
+                                  }
+                                >
+                                  <SelectTrigger className="h-6 w-auto px-1.5 text-[9px] gap-1 border-none shadow-none text-primary hover:bg-primary/5 cursor-pointer">
+                                    <Plus className="h-2.5 w-2.5" />
+                                    <span>Add Approval</span>
+                                  </SelectTrigger>
+                                  <SelectContent align="end">
+                                    {!hasCodeA && (
+                                      <SelectItem value="A" className="text-xs">
+                                        Code A
+                                      </SelectItem>
+                                    )}
+                                    {!hasCodeB && (
+                                      <SelectItem value="B" className="text-xs">
+                                        Code B
+                                      </SelectItem>
+                                    )}
+                                  </SelectContent>
+                                </Select>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })()}
+
+                      {[...(update.approvals || [])]
+                        .sort((a, b) =>
+                          String(a.approval_code).localeCompare(
+                            String(b.approval_code),
+                          ),
+                        )
+                        .map((approval: StatusApproval, idx: number) => {
+                          const label =
+                            approval.approval_code === 'A'
+                              ? 'Code A approved'
+                              : 'Code B approved with comment'
+
+                          return (
+                            <div
+                              key={`${approval.approval_code}-${approval.id || idx}`}
+                              className="space-y-1.5"
+                            >
+                              <Label className="text-xs font-semibold text-zinc-500">
+                                {label}
+                              </Label>
+                              <Input
+                                type="date"
+                                value={formatDate(approval.approved_at)}
+                                onChange={(e) =>
+                                  handleApprovalDateChange(
+                                    approval.id,
+                                    e.target.value,
+                                  )
+                                }
+                                disabled={
+                                  updatingId === `approval-${approval.id}`
+                                }
+                                className="h-9 text-xs bg-white dark:bg-zinc-950 shadow-none border-zinc-200 dark:border-zinc-800 cursor-pointer"
+                              />
+                            </div>
+                          )
+                        })}
+                      {(update.approvals || []).length === 0 && (
+                        <p className="text-[10px] text-muted-foreground italic py-2">
+                          No approval records found. Click buttons above to add.
+                        </p>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Revision History Rows (Submitted or Rejected) */}
+                  {(update.status === 'submitted' ||
+                    update.status === 'rejected') && (
+                    <div className="space-y-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                          Revision History
+                        </p>
+                        <Select
+                          onValueChange={(val) =>
+                            handleCreateRevision(update.id, parseInt(val))
+                          }
+                          disabled={
+                            updatingId?.startsWith('rev-create-') ||
+                            (update.revisions || []).length >= 9
+                          }
+                        >
+                          <SelectTrigger className="h-6 w-auto px-2 text-[9px] gap-1.5 border-none shadow-none text-primary hover:bg-primary/5 cursor-pointer">
+                            <Plus className="h-2.5 w-2.5" />
+                            <span>Add Revision</span>
+                          </SelectTrigger>
+                          <SelectContent align="end">
+                            {Array.from({ length: 9 }, (_, i) => i)
+                              .filter(
+                                (num) =>
+                                  !(update.revisions || []).some(
+                                    (r: StatusRevision) =>
+                                      r.revision_number === num,
+                                  ),
+                              )
+                              .map((num) => (
+                                <SelectItem
+                                  key={num}
+                                  value={num.toString()}
+                                  className="text-xs"
+                                >
+                                  REV{String(num).padStart(2, '0')}
+                                </SelectItem>
+                              ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-3">
+                        {[...(update.revisions || [])]
+                          .sort(
+                            (a, b) =>
+                              (a.revision_number || 0) -
+                              (b.revision_number || 0),
+                          )
+                          .map((rev: StatusRevision) => (
+                            <div key={rev.id} className="space-y-1.5">
+                              <div className="flex items-center justify-between">
+                                <Label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                                  REV
+                                  {String(rev.revision_number).padStart(2, '0')}
+                                </Label>
+                              </div>
+                              <Input
+                                type="date"
+                                value={formatDate(rev.revision_date)}
+                                onChange={(e) =>
+                                  handleRevisionDateChange(
+                                    rev.id,
+                                    e.target.value,
+                                  )
+                                }
+                                disabled={updatingId === `rev-update-${rev.id}`}
+                                className="h-9 text-xs bg-white dark:bg-zinc-950 shadow-none border-zinc-200 dark:border-zinc-800 cursor-pointer"
+                              />
+                            </div>
+                          ))}
+
+                        {(update.revisions || []).length === 0 && (
+                          <div className="text-center py-4 rounded-md border border-dashed bg-muted/5">
+                            <p className="text-[10px] text-muted-foreground italic">
+                              No revisions tracked. Click &apos;Add
+                              Revision&apos; to start.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* PDF Upload/Download Section */}
+                  {!isInProgress && update.id && (
+                    <div className="space-y-4 pt-6 border-t border-zinc-100 dark:border-zinc-800 mt-auto">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium">
+                          Technical Attachment
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Download or upload the latest PDF.
+                        </p>
+                      </div>
+
+                      <div className="flex flex-col gap-2">
+                        {pdfPath ? (
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start gap-2 h-9 text-xs"
+                            asChild
+                          >
+                            <a
+                              href={
+                                pdfPath.startsWith('http')
+                                  ? pdfPath
+                                  : `${process.env.NEXT_PUBLIC_API_URL || ''}/storage/${pdfPath}`
+                              }
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <FileDown className="h-3.5 w-3.5" />
+                              Download Attachment
+                            </a>
+                          </Button>
+                        ) : (
+                          <div className="flex items-center gap-2 p-2 rounded-md bg-muted/30 text-muted-foreground text-[10px] border border-dashed">
+                            <FileText className="h-3 w-3" />
+                            No attachment found
+                          </div>
+                        )}
+
+                        <div className="relative">
+                          <input
+                            type="file"
+                            accept=".pdf"
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0]
+                              if (file) handleFileUpload(update.id, file)
+                            }}
+                            disabled={updatingId === update.id}
+                          />
+                          <Button
+                            variant="secondary"
+                            className="w-full justify-start gap-2 h-9 text-xs"
+                            disabled={updatingId === update.id}
+                          >
+                            <FileUp className="h-3.5 w-3.5" />
+                            Upload New PDF
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {!update.id && (
+                    <p className="text-[10px] text-destructive font-medium border-t pt-4 mt-auto">
+                      Manual status override not available for this data format.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )
+          })
+        })()}
+
+        {(() => {
+          let updates = unit.status_updates || unit.statusUpdates || []
+          if (updates && !Array.isArray(updates) && 'data' in updates) {
+            updates = updates.data
+          }
+
+          const isEmpty =
+            !updates ||
+            (Array.isArray(updates)
+              ? updates.length === 0
+              : Object.keys(updates).length === 0)
+
+          if (isEmpty) {
+            return (
+              <div className="text-center py-20 border rounded-xl border-dashed bg-muted/20 w-full col-span-full">
+                <p className="text-muted-foreground">
+                  No status update records found for this unit.
+                </p>
+              </div>
+            )
+          }
+          return null
+        })()}
+      </div>
+    </div>
+  )
+}
