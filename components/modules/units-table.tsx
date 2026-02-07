@@ -16,6 +16,7 @@ import {
   ChevronDown,
   ChevronRight,
   SquarePen,
+  Trash2,
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
@@ -23,6 +24,17 @@ import { useProjectStore } from '@/store/useProjectStore'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { toast } from 'sonner'
 
 interface UnitsTableProps {
   units: Unit[]
@@ -157,17 +169,20 @@ function UnitCard({
               ))}
           </div>
           {showActions && (
-            <Link
-              href={`/dashboard/engineering-submissions/${projectId}/units/${unit.id}/edit`}
-            >
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 cursor-pointer"
+            <div className="flex items-center gap-1">
+              <Link
+                href={`/dashboard/engineering-submissions/${projectId}/units/${unit.id}/edit`}
               >
-                <SquarePen className="h-4 w-4" />
-              </Button>
-            </Link>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 cursor-pointer"
+                >
+                  <SquarePen className="h-4 w-4" />
+                </Button>
+              </Link>
+              <DeleteUnitButton unitId={unit.id} onDeleted={() => {}} />
+            </div>
           )}
         </div>
         <div className="grid grid-cols-3 gap-3">
@@ -378,17 +393,20 @@ function UnitRow({
         )}
         {showActions && (
           <TableCell className="text-right">
-            <Link
-              href={`/dashboard/engineering-submissions/${projectId}/units/${unit.id}/edit`}
-            >
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8 cursor-pointer"
+            <div className="flex justify-end items-center gap-1">
+              <Link
+                href={`/dashboard/engineering-submissions/${projectId}/units/${unit.id}/edit`}
               >
-                <SquarePen className="h-4 w-4" />
-              </Button>
-            </Link>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 cursor-pointer"
+                >
+                  <SquarePen className="h-4 w-4" />
+                </Button>
+              </Link>
+              <DeleteUnitButton unitId={unit.id} onDeleted={() => {}} />
+            </div>
           </TableCell>
         )}
       </TableRow>
@@ -759,4 +777,76 @@ function getCategoryLabel(key: string) {
     landing_dwg: 'Landing DWG',
   }
   return labels[key] || key
+}
+
+function DeleteUnitButton({
+  unitId,
+  onDeleted,
+}: {
+  unitId: string
+  onDeleted: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
+
+  const handleDelete = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    setIsDeleting(true)
+    try {
+      await useProjectStore.getState().deleteUnit(unitId)
+      toast.success('Unit deleted successfully')
+      onDeleted()
+      setOpen(false)
+    } catch (error) {
+      console.error('Failed to delete unit', error)
+      // Error is handled by global error handler but we stop loading
+      toast.error('Failed to delete unit')
+    } finally {
+      setIsDeleting(false)
+    }
+  }
+
+  return (
+    <>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 cursor-pointer text-destructive hover:text-destructive hover:bg-destructive/10"
+        onClick={(e) => {
+          e.stopPropagation()
+          setOpen(true)
+        }}
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
+
+      <AlertDialog open={open} onOpenChange={setOpen}>
+        <AlertDialogContent
+          onClick={(e: React.MouseEvent) => e.stopPropagation()}
+        >
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the
+              unit and all of its stages, tasks, and submission history.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              onClick={(e: React.MouseEvent) => e.stopPropagation()}
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete Unit'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  )
 }

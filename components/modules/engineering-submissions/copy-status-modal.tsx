@@ -10,18 +10,18 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Badge } from '@/components/ui/badge'
-import { AlertCircle, Loader2 } from 'lucide-react'
-import { Unit, StatusUpdate } from '@/types'
+import { AlertCircle, Loader2, CheckCircle2 } from 'lucide-react'
+import { Unit } from '@/types'
 import { getProjectUnits } from '@/services/engineeringSubmissionService'
 import { cn } from '@/lib/utils'
 
 interface CopyStatusModalProps {
   isOpen: boolean
   onClose: () => void
-  onCopy: (sourceUnitId: string, sourceStatusKey: string) => Promise<void>
+  onCopy: (targetUnitIds: string[]) => Promise<void>
   projectId: string
   currentUnitId: string
   targetCategory: string
@@ -34,14 +34,11 @@ export function CopyStatusModal({
   onCopy,
   projectId,
   currentUnitId,
-  targetCategory,
   targetCategoryLabel,
 }: CopyStatusModalProps) {
   const [units, setUnits] = useState<Unit[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null)
-  const [selectedStatusKey, setSelectedStatusKey] =
-    useState<string>(targetCategory)
+  const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const fetchUnits = useCallback(async () => {
@@ -60,14 +57,31 @@ export function CopyStatusModal({
   useEffect(() => {
     if (isOpen && projectId) {
       fetchUnits()
+      setSelectedUnitIds([]) // Reset selection when opening
     }
   }, [isOpen, projectId, fetchUnits])
 
+  const handleToggleUnit = (unitId: string) => {
+    setSelectedUnitIds((prev) =>
+      prev.includes(unitId)
+        ? prev.filter((id) => id !== unitId)
+        : [...prev, unitId],
+    )
+  }
+
+  const handleSelectAll = () => {
+    if (selectedUnitIds.length === units.length) {
+      setSelectedUnitIds([])
+    } else {
+      setSelectedUnitIds(units.map((u) => u.id))
+    }
+  }
+
   const handleCopy = async () => {
-    if (!selectedUnitId || !selectedStatusKey) return
+    if (selectedUnitIds.length === 0) return
     setIsSubmitting(true)
     try {
-      await onCopy(selectedUnitId, selectedStatusKey)
+      await onCopy(selectedUnitIds)
       onClose()
     } catch (error) {
       console.error('Copy failed', error)
@@ -76,159 +90,119 @@ export function CopyStatusModal({
     }
   }
 
-  const technicalCategories = [
-    { key: 'tech', label: 'Tech Sub' },
-    { key: 'sample', label: 'Sample' },
-    { key: 'layout', label: 'Layout' },
-    { key: 'car_m_dwg', label: 'Car M DWG' },
-    { key: 'cop_dwg', label: 'COP DWG' },
-    { key: 'landing_dwg', label: 'Landing DWG' },
-  ]
+  const isAllSelected =
+    units.length > 0 && selectedUnitIds.length === units.length
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[95vw] max-w-3xl max-h-[90vh] flex flex-col p-4 sm:p-6">
+      <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] flex flex-col p-4 sm:p-6 !rounded-2xl">
         <DialogHeader className="pb-4">
-          <DialogTitle className="text-lg sm:text-xl">
-            Copy Status to {targetCategoryLabel}
+          <DialogTitle className="text-xl font-bold flex items-center gap-2">
+            <CheckCircle2 className="h-5 w-5 text-primary" />
+            Bulk Copy {targetCategoryLabel} Status to Other Units
           </DialogTitle>
-          <DialogDescription className="text-xs sm:text-sm">
-            Select a unit and the specific status you want to copy from. This
-            will overwrite all data for {targetCategoryLabel} on the current
-            unit.
+          <DialogDescription className="text-sm">
+            Select the target units where you want to apply the current
+            unit&apos;s **
+            {targetCategoryLabel}** status, including all approvals, revisions,
+            and PDF attachments.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto min-h-0 border-y py-2">
+        <div className="flex-1 overflow-hidden min-h-0 flex flex-col border-y my-2 border-zinc-100 dark:border-zinc-800">
           {isLoading ? (
-            <div className="flex items-center justify-center p-12">
+            <div className="flex-1 flex items-center justify-center p-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
-            <div className="p-2 sm:p-4 space-y-6">
-              <RadioGroup
-                value={selectedUnitId || ''}
-                onValueChange={setSelectedUnitId}
-                className="space-y-4"
-              >
-                {units.map((unit) => (
-                  <div
-                    key={unit.id}
-                    className={cn(
-                      'flex flex-col gap-3 p-3 sm:p-4 rounded-lg border transition-all cursor-pointer hover:border-primary/50',
-                      selectedUnitId === unit.id
-                        ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
-                        : 'border-zinc-200 dark:border-zinc-800',
-                    )}
-                    onClick={() => setSelectedUnitId(unit.id)}
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <div className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-900/50 border-b border-zinc-100 dark:border-zinc-800">
+                <div className="flex items-center gap-3">
+                  <Checkbox
+                    id="select-all"
+                    checked={isAllSelected}
+                    onCheckedChange={handleSelectAll}
+                  />
+                  <Label
+                    htmlFor="select-all"
+                    className="font-bold text-sm cursor-pointer select-none"
                   >
-                    <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
-                        <RadioGroupItem
-                          value={unit.id}
-                          id={unit.id}
-                          className="mt-1"
-                        />
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
-                          <Label
-                            htmlFor={unit.id}
-                            className="font-bold text-sm cursor-pointer"
-                          >
-                            {unit.equipment_number}
-                          </Label>
-                          <Badge
-                            variant="outline"
-                            className="text-[9px] sm:text-[10px] h-4 w-fit"
-                          >
-                            {unit.category}
-                          </Badge>
-                        </div>
+                    Select All ({units.length})
+                  </Label>
+                </div>
+                {selectedUnitIds.length > 0 && (
+                  <Badge variant="secondary" className="font-bold">
+                    {selectedUnitIds.length} selected
+                  </Badge>
+                )}
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-zinc-200 dark:scrollbar-thumb-zinc-800">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {units.map((unit) => (
+                    <div
+                      key={unit.id}
+                      className={cn(
+                        'flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer select-none',
+                        selectedUnitIds.includes(unit.id)
+                          ? 'border-primary bg-primary/5 ring-1 ring-primary/10'
+                          : 'border-zinc-100 dark:border-zinc-800 hover:border-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-900',
+                      )}
+                      onClick={() => handleToggleUnit(unit.id)}
+                    >
+                      <Checkbox
+                        checked={selectedUnitIds.includes(unit.id)}
+                        onCheckedChange={() => handleToggleUnit(unit.id)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                      <div className="flex flex-col min-w-0">
+                        <Label className="font-bold text-xs truncate cursor-pointer">
+                          {unit.equipment_number}
+                        </Label>
                       </div>
                     </div>
-
-                    <div className="grid grid-cols-2 gap-2 sm:gap-3 ml-7">
-                      {technicalCategories.map((cat) => {
-                        const update = getTechnicalUpdate(unit, cat.key)
-                        const status = update?.status
-                        const isSelectedStatus =
-                          selectedUnitId === unit.id &&
-                          selectedStatusKey === cat.key
-
-                        return (
-                          <div
-                            key={cat.key}
-                            className={cn(
-                              'flex flex-col gap-1.5 p-2 rounded border text-left cursor-pointer transition-colors',
-                              isSelectedStatus
-                                ? 'border-primary bg-primary/10 shadow-sm'
-                                : 'border-transparent hover:bg-zinc-100 dark:hover:bg-zinc-800',
-                            )}
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setSelectedUnitId(unit.id)
-                              setSelectedStatusKey(cat.key)
-                            }}
-                          >
-                            <span className="text-[10px] font-bold uppercase text-muted-foreground whitespace-nowrap">
-                              {cat.label}
-                            </span>
-                            <div className="flex flex-col gap-1">
-                              <Badge
-                                variant={getStatusBadgeVariant(status)}
-                                className="w-fit text-[9px] px-1.5 h-4"
-                              >
-                                {getStatusLabel(status)}
-                              </Badge>
-                              {renderTechnicalDetails(update)}
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </RadioGroup>
-
-              {/* Warning inside ScrollArea with enough bottom padding */}
-              <div className="flex items-start gap-3 p-3 rounded-lg bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 text-red-600 dark:text-red-400">
-                <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
-                <div className="text-[10px] sm:text-xs leading-relaxed">
-                  <p className="font-bold mb-1 uppercase tracking-wider">
-                    Warning
-                  </p>
-                  This will permanently overwrite the current **
-                  {targetCategoryLabel}** status, all approvals, revisions, and
-                  the PDF attachment on this unit. This action cannot be undone.
+                  ))}
                 </div>
               </div>
             </div>
           )}
         </div>
 
-        <div className="pt-4 sm:pt-6 space-y-4">
-          {/* The warning message was moved inside the scrollable area */}
+        <div className="pt-4 space-y-4">
+          <div className="flex items-start gap-3 p-4 rounded-xl bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/30 text-orange-700 dark:text-orange-400">
+            <AlertCircle className="h-5 w-5 shrink-0" />
+            <div className="text-xs leading-relaxed">
+              <p className="font-bold mb-1 uppercase tracking-wider">
+                Crucial Warning
+              </p>
+              This will **permanently overwrite** the current status, approvals,
+              and revisions for all selected units. This action cannot be
+              undone.
+            </div>
+          </div>
+
           <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button
               variant="ghost"
               onClick={onClose}
               disabled={isSubmitting}
-              className="w-full sm:w-auto"
+              className="w-full sm:w-auto h-11"
             >
               Cancel
             </Button>
             <Button
               variant="destructive"
               onClick={handleCopy}
-              disabled={!selectedUnitId || isSubmitting}
-              className="w-full sm:w-auto font-bold capitalize"
+              disabled={selectedUnitIds.length === 0 || isSubmitting}
+              className="w-full sm:flex-1 h-11 font-bold shadow-lg shadow-destructive/20"
             >
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Copying...
+                  Processing Bulk Copy...
                 </>
               ) : (
-                `Overwrite & Copy Status`
+                `Overwrite & Copy Status to ${selectedUnitIds.length} Unit${selectedUnitIds.length === 1 ? '' : 's'}`
               )}
             </Button>
           </DialogFooter>
@@ -236,110 +210,4 @@ export function CopyStatusModal({
       </DialogContent>
     </Dialog>
   )
-}
-
-// Helpers (replicated from units-table.tsx)
-function getTechnicalUpdate(unit: Unit, key: string) {
-  if (!unit) return undefined
-  let updates = unit.status_updates || unit.statusUpdates || []
-  if (updates && !Array.isArray(updates) && 'data' in updates) {
-    updates = (updates as { data: StatusUpdate[] }).data
-  }
-  const updatesArray = (
-    Array.isArray(updates) ? updates : Object.values(updates || {})
-  ) as StatusUpdate[]
-  return updatesArray.find((u: StatusUpdate) => u && u.category === key)
-}
-
-function renderTechnicalDetails(update?: StatusUpdate) {
-  if (!update || !update.status) return null
-
-  const status = update.status
-  const formatDate = (dateValue: string | number | null | undefined) => {
-    if (!dateValue) return ''
-    try {
-      let date: Date
-      if (typeof dateValue === 'number') {
-        const timestamp = dateValue < 5000000000 ? dateValue * 1000 : dateValue
-        date = new Date(timestamp)
-      } else {
-        const normalized = dateValue.includes(' ')
-          ? dateValue.replace(' ', 'T')
-          : dateValue
-        date = new Date(normalized)
-        if (isNaN(date.getTime())) {
-          const num = Number(dateValue)
-          if (!isNaN(num)) {
-            const timestamp = num < 5000000000 ? num * 1000 : num
-            date = new Date(timestamp)
-          }
-        }
-      }
-      if (isNaN(date.getTime())) return ''
-      return date.toISOString().split('T')[0]
-    } catch {
-      return ''
-    }
-  }
-
-  if (status === 'submitted' || status === 'rejected') {
-    const statusKey = status as 'submitted' | 'rejected'
-    const revisions = update.revisions?.[statusKey] || []
-    if (revisions.length === 0) return null
-    const lastRev = [...revisions].sort(
-      (a, b) => (a.revision_number || 0) - (b.revision_number || 0),
-    )[revisions.length - 1]
-
-    return (
-      <div className="text-[8px] text-muted-foreground font-medium leading-tight whitespace-nowrap">
-        REV{String(lastRev.revision_number).padStart(2, '0')}{' '}
-        {formatDate(lastRev.revision_date)}
-      </div>
-    )
-  }
-
-  if (status === 'approved') {
-    const approvals = update.approvals || []
-    if (approvals.length === 0) return null
-    const lastApproval = approvals[approvals.length - 1]
-    const label = lastApproval.approval_code === 'A' ? 'Code A' : 'Code B'
-    return (
-      <div className="text-[8px] text-muted-foreground font-medium leading-tight">
-        {label}
-        <br />
-        {formatDate(lastApproval.approved_at)}
-      </div>
-    )
-  }
-
-  return null
-}
-
-function getStatusBadgeVariant(
-  status?: string | null,
-):
-  | 'success'
-  | 'info'
-  | 'destructive'
-  | 'warning'
-  | 'secondary'
-  | 'outline'
-  | 'default' {
-  switch (status) {
-    case 'approved':
-      return 'success'
-    case 'submitted':
-      return 'info'
-    case 'rejected':
-      return 'destructive'
-    case 'in_progress':
-      return 'warning'
-    default:
-      return 'outline'
-  }
-}
-
-function getStatusLabel(status?: string | null) {
-  if (!status) return 'N/A'
-  return status.replace('_', ' ').toUpperCase()
 }

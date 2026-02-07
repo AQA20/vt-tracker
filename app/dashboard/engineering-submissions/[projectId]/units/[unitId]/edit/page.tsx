@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, use, useState } from 'react'
-import { useProjectUnits } from '@/hooks/useProjectUnits'
 import { useProjectStore } from '@/store/useProjectStore'
 import { Button } from '@/components/ui/button'
 import {
@@ -33,7 +32,7 @@ import {
   createStatusApproval,
   createStatusRevision,
   updateStatusRevision,
-  copyUnitStatus,
+  bulkCopyUnitStatus,
 } from '@/services/engineeringSubmissionService'
 import { CopyStatusModal } from '@/components/modules/engineering-submissions/copy-status-modal'
 import { toast } from 'sonner'
@@ -45,8 +44,8 @@ export default function EditUnitStatusPage({
   params: Promise<{ projectId: string; unitId: string }>
 }) {
   const { projectId, unitId } = use(params)
-  const { currentProject, fetchProjectById } = useProjectStore()
-  const { units, isLoading, fetchUnits } = useProjectUnits(projectId)
+  const { currentProject, fetchProjectById, units, isLoading, fetchUnits } =
+    useProjectStore()
   const [updatingId, setUpdatingId] = useState<string | null>(null)
 
   // Local state for fetching/loading
@@ -62,7 +61,7 @@ export default function EditUnitStatusPage({
   useEffect(() => {
     if (projectId) {
       fetchProjectById(projectId)
-      fetchUnits()
+      fetchUnits(projectId)
     }
   }, [projectId, fetchProjectById, fetchUnits])
 
@@ -88,10 +87,9 @@ export default function EditUnitStatusPage({
     try {
       await updateStatusUpdate(statusUpdateId, newStatus)
       toast.success('Status updated successfully')
-      fetchUnits() // Refresh data
+      fetchUnits(projectId) // Refresh data
     } catch (error) {
       console.error('Failed to update status', error)
-      toast.error('Failed to update status')
     } finally {
       setUpdatingId(null)
     }
@@ -102,10 +100,9 @@ export default function EditUnitStatusPage({
     try {
       await uploadStatusUpdatePdf(statusUpdateId, file)
       toast.success('PDF uploaded successfully')
-      fetchUnits()
+      fetchUnits(projectId)
     } catch (error) {
       console.error('Failed to upload PDF', error)
-      toast.error('Failed to upload PDF')
     } finally {
       setUpdatingId(null)
     }
@@ -121,10 +118,9 @@ export default function EditUnitStatusPage({
       const formattedDateTime = `${newDate} 12:00:00`
       await updateStatusApproval(approvalId, formattedDateTime)
       toast.success('Approval date updated')
-      fetchUnits()
+      fetchUnits(projectId)
     } catch (error) {
       console.error('Failed to update approval date', error)
-      toast.error('Failed to update approval date')
     } finally {
       setUpdatingId(null)
     }
@@ -144,10 +140,9 @@ export default function EditUnitStatusPage({
         approved_at: approvedAt,
       })
       toast.success(`Code ${approvalCode} approval added`)
-      fetchUnits()
+      fetchUnits(projectId)
     } catch (error) {
       console.error('Failed to create approval', error)
-      toast.error('Failed to create approval')
     } finally {
       setUpdatingId(null)
     }
@@ -165,13 +160,13 @@ export default function EditUnitStatusPage({
       await createStatusRevision({
         status_update_id: statusUpdateId,
         revision_date: revisionDate,
+        revision_number: revisionNumber,
         category,
       })
       toast.success(`REV${String(revisionNumber).padStart(2, '0')} added`)
-      fetchUnits()
+      fetchUnits(projectId)
     } catch (error) {
       console.error('Failed to create revision', error)
-      toast.error('Failed to create revision')
     } finally {
       setUpdatingId(null)
     }
@@ -187,32 +182,28 @@ export default function EditUnitStatusPage({
       const formattedDate = `${newDate} 12:00:00`
       await updateStatusRevision(revisionId, formattedDate)
       toast.success('Revision date updated')
-      fetchUnits()
+      fetchUnits(projectId)
     } catch (error) {
       console.error('Failed to update revision date', error)
-      toast.error('Failed to update revision date')
     } finally {
       setUpdatingId(null)
     }
   }
 
-  const handleCopyStatus = async (
-    sourceUnitId: string,
-    sourceStatusKey: string,
-  ) => {
+  const handleCopyStatus = async (targetUnitIds: string[]) => {
     if (!targetCopyCategory) return
     setIsInternalLoading(true)
     try {
-      await copyUnitStatus(unitId, targetCopyCategory.key, {
-        source_unit_id: sourceUnitId,
-        source_status_key: sourceStatusKey,
+      await bulkCopyUnitStatus(unitId, targetCopyCategory.key, {
+        target_unit_ids: targetUnitIds,
       })
-      toast.success(`Status copied successfully`)
-      await fetchUnits()
+      toast.success(
+        `Status copied successfully to ${targetUnitIds.length} units`,
+      )
+      await fetchUnits(projectId)
       setCopyModalOpen(false)
     } catch (error) {
       console.error('Failed to copy status', error)
-      toast.error('Failed to copy status')
     } finally {
       setIsInternalLoading(false)
     }
@@ -520,6 +511,13 @@ export default function EditUnitStatusPage({
                           Revision History
                         </p>
                         <Select
+                          key={`${update.id}-${update.status}-${
+                            (
+                              update.revisions?.[
+                                update.status as 'submitted' | 'rejected'
+                              ] || []
+                            ).length
+                          }`}
                           onValueChange={(val) => {
                             const statusKey = update.status as
                               | 'submitted'

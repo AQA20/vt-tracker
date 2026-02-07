@@ -1,6 +1,6 @@
 'use client'
+
 import { useEffect, use } from 'react'
-import { useProjectUnits } from '@/hooks/useProjectUnits'
 import { useProjectStore } from '@/store/useProjectStore'
 import { UnitsTable } from '@/components/modules/units-table'
 import { Button } from '@/components/ui/button'
@@ -15,15 +15,23 @@ export default function ProjectUnitsPage({
   params: Promise<{ projectId: string }>
 }) {
   const { projectId } = use(params)
-  const { currentProject, fetchProjectById } = useProjectStore()
-  const { units, stats, isLoading, fetchUnits } = useProjectUnits(projectId)
+  const {
+    currentProject,
+    fetchProjectById,
+    units,
+    stats,
+    isLoading,
+    fetchUnits,
+    fetchProjectStats,
+  } = useProjectStore()
 
   useEffect(() => {
     if (projectId) {
       fetchProjectById(projectId)
-      fetchUnits()
+      fetchUnits(projectId)
+      fetchProjectStats(projectId)
     }
-  }, [projectId, fetchProjectById, fetchUnits])
+  }, [projectId, fetchProjectById, fetchUnits, fetchProjectStats])
 
   if (!currentProject) return null
 

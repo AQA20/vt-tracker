@@ -40,6 +40,7 @@ export const createStatusApproval = (payload: {
 export const createStatusRevision = (payload: {
   status_update_id: string
   revision_date: string
+  revision_number: number
   category: string
 }) => api.post(`/status-revisions`, payload)
 
@@ -58,3 +59,14 @@ export const copyUnitStatus = (
 
 export const updateStatusRevision = (id: string, revisionDate: string) =>
   api.patch(`/status-revisions/${id}`, { revision_date: revisionDate })
+
+export const bulkCopyUnitStatus = (
+  sourceUnitId: string,
+  category: string,
+  payload: {
+    target_unit_ids: string[]
+  },
+) =>
+  api.post(`/units/${sourceUnitId}/statuses/${category}/copy-to-units`, payload)
+
+export const deleteUnit = (id: string | number) => api.delete(`/units/${id}`)
