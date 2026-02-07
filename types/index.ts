@@ -70,7 +70,10 @@ export interface StatusUpdate {
   notes?: string
   created_at: string
   updated_at: string
-  revisions?: StatusRevision[]
+  revisions?: {
+    submitted: StatusRevision[]
+    rejected: StatusRevision[]
+  }
   approvals?: StatusApproval[]
 }
 

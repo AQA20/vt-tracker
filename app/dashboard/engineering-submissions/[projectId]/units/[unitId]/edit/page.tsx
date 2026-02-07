@@ -11,9 +11,10 @@ import {
   FileDown,
   FileText,
   Plus,
+  Copy,
 } from 'lucide-react'
 import Link from 'next/link'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import {
   Select,
   SelectContent,
@@ -32,8 +33,11 @@ import {
   createStatusApproval,
   createStatusRevision,
   updateStatusRevision,
+  copyUnitStatus,
 } from '@/services/engineeringSubmissionService'
+import { CopyStatusModal } from '@/components/modules/engineering-submissions/copy-status-modal'
 import { toast } from 'sonner'
+import { Badge } from '@/components/ui/badge'
 
 export default function EditUnitStatusPage({
   params,
@@ -44,6 +48,16 @@ export default function EditUnitStatusPage({
   const { currentProject, fetchProjectById } = useProjectStore()
   const { units, isLoading, fetchUnits } = useProjectUnits(projectId)
   const [updatingId, setUpdatingId] = useState<string | null>(null)
+
+  // Local state for fetching/loading
+  const [isInternalLoading, setIsInternalLoading] = useState(false)
+
+  // Copy Status Modal State
+  const [copyModalOpen, setCopyModalOpen] = useState(false)
+  const [targetCopyCategory, setTargetCopyCategory] = useState<{
+    key: string
+    label: string
+  } | null>(null)
 
   useEffect(() => {
     if (projectId) {
@@ -128,7 +142,6 @@ export default function EditUnitStatusPage({
         status_update_id: statusUpdateId,
         approval_code: approvalCode,
         approved_at: approvedAt,
-        comment: 'Initial approval',
       })
       toast.success(`Code ${approvalCode} approval added`)
       fetchUnits()
@@ -143,6 +156,7 @@ export default function EditUnitStatusPage({
   const handleCreateRevision = async (
     statusUpdateId: string,
     revisionNumber: number,
+    category: 'submitted' | 'rejected',
   ) => {
     setUpdatingId(`rev-create-${statusUpdateId}-${revisionNumber}`)
     try {
@@ -150,9 +164,8 @@ export default function EditUnitStatusPage({
       const revisionDate = `${today} 12:00:00`
       await createStatusRevision({
         status_update_id: statusUpdateId,
-        revision_number: revisionNumber,
         revision_date: revisionDate,
-        pdf_path: null,
+        category,
       })
       toast.success(`REV${String(revisionNumber).padStart(2, '0')} added`)
       fetchUnits()
@@ -183,6 +196,28 @@ export default function EditUnitStatusPage({
     }
   }
 
+  const handleCopyStatus = async (
+    sourceUnitId: string,
+    sourceStatusKey: string,
+  ) => {
+    if (!targetCopyCategory) return
+    setIsInternalLoading(true)
+    try {
+      await copyUnitStatus(unitId, targetCopyCategory.key, {
+        source_unit_id: sourceUnitId,
+        source_status_key: sourceStatusKey,
+      })
+      toast.success(`Status copied successfully`)
+      await fetchUnits()
+      setCopyModalOpen(false)
+    } catch (error) {
+      console.error('Failed to copy status', error)
+      toast.error('Failed to copy status')
+    } finally {
+      setIsInternalLoading(false)
+    }
+  }
+
   const getCategoryLabel = (key: string) => {
     const labels: Record<string, string> = {
       tech: 'Tech Sub',
@@ -199,20 +234,14 @@ export default function EditUnitStatusPage({
     if (!dateValue) return ''
     try {
       let date: Date
-
       if (typeof dateValue === 'number') {
-        // If it's a timestamp in seconds (Unix), convert to ms
-        // 5000000000 is a safe threshold to distinguish between seconds and ms for next few decades
         const timestamp = dateValue < 5000000000 ? dateValue * 1000 : dateValue
         date = new Date(timestamp)
       } else {
-        // Handle common backend formats where space might be used instead of 'T'
         const normalized = dateValue.includes(' ')
           ? dateValue.replace(' ', 'T')
           : dateValue
         date = new Date(normalized)
-
-        // If invalid, try parsing as number just in case it's a stringified timestamp
         if (isNaN(date.getTime())) {
           const num = Number(dateValue)
           if (!isNaN(num)) {
@@ -221,11 +250,9 @@ export default function EditUnitStatusPage({
           }
         }
       }
-
       if (isNaN(date.getTime())) return ''
       return date.toISOString().split('T')[0]
-    } catch (e) {
-      console.error('Date parsing error:', e)
+    } catch {
       return ''
     }
   }
@@ -248,11 +275,17 @@ export default function EditUnitStatusPage({
         </div>
       </div>
 
+      {(isLoading || isInternalLoading) && !unit && (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {(() => {
           let updates = unit.status_updates || unit.statusUpdates || []
           if (updates && !Array.isArray(updates) && 'data' in updates) {
-            updates = updates.data
+            updates = (updates as { data: StatusUpdate[] }).data
           }
 
           const updatesArray = (
@@ -261,7 +294,6 @@ export default function EditUnitStatusPage({
 
           if (updatesArray.length === 0) return null
 
-          // Sort by stable category order
           const CATEGORY_ORDER = [
             'tech',
             'sample',
@@ -271,26 +303,24 @@ export default function EditUnitStatusPage({
             'landing_dwg',
           ]
 
-          // Use stable sort to prevent jumping
           const sortedUpdates = [...updatesArray].sort(
             (a: StatusUpdate, b: StatusUpdate) => {
               const orderA = CATEGORY_ORDER.indexOf(a.category || '')
               const orderB = CATEGORY_ORDER.indexOf(b.category || '')
-
-              // Primary sort by category order
               const diff =
                 (orderA === -1 ? 999 : orderA) - (orderB === -1 ? 999 : orderB)
               if (diff !== 0) return diff
-
-              // Secondary stable sort by ID
               return String(a.id).localeCompare(String(b.id))
             },
           )
 
-          return sortedUpdates.map((update: StatusUpdate) => {
-            // PDF Logic
+          return sortedUpdates.map((update: StatusUpdate, index: number) => {
             const isApproved = update.status === 'approved'
             const isInProgress = update.status === 'in_progress'
+            const cat = {
+              key: update.category || '',
+              label: getCategoryLabel(update.category || ''),
+            }
 
             let pdfPath = null
             if (isApproved) {
@@ -302,9 +332,10 @@ export default function EditUnitStatusPage({
               ) {
                 pdfPath = lastApproval.pdf_path
               }
-            } else if (!isInProgress) {
-              const lastRevision =
-                update.revisions?.[update.revisions.length - 1]
+            } else if (!isInProgress && update.status) {
+              const statusKey = update.status as 'submitted' | 'rejected'
+              const statusRevisions = update.revisions?.[statusKey] || []
+              const lastRevision = statusRevisions[statusRevisions.length - 1]
               pdfPath = lastRevision?.pdf_path
             }
 
@@ -313,16 +344,47 @@ export default function EditUnitStatusPage({
                 key={update.id}
                 className="overflow-hidden border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col"
               >
-                <CardHeader className="bg-zinc-50/50 dark:bg-zinc-900/50 py-3 border-b border-zinc-200 dark:border-zinc-800">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-sm font-bold uppercase tracking-wider text-muted-foreground">
-                      {getCategoryLabel(update.category || '')}
-                    </CardTitle>
-                    {updatingId === update.id && (
-                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                    )}
+                <div className="p-4 border-b bg-zinc-50/50 dark:bg-zinc-900/50 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="text-xs font-bold text-primary">
+                        {index + 1}
+                      </span>
+                    </div>
+                    <h3 className="font-bold text-sm">{cat.label}</h3>
                   </div>
-                </CardHeader>
+                  <div className="flex items-center gap-2">
+                    {units.length > 1 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-[10px] gap-1.5 font-bold uppercase tracking-wider px-2 bg-background hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
+                        onClick={() => {
+                          setTargetCopyCategory(cat)
+                          setCopyModalOpen(true)
+                        }}
+                      >
+                        <Copy className="h-3 w-3" />
+                        Copy Status
+                      </Button>
+                    )}
+                    <Badge
+                      className="py-1 px-3 text-[10px] font-bold uppercase tracking-widest border-none shadow-sm"
+                      variant={
+                        update?.status === 'approved'
+                          ? 'success'
+                          : update?.status === 'rejected'
+                            ? 'destructive'
+                            : update?.status === 'submitted'
+                              ? 'info'
+                              : 'secondary'
+                      }
+                    >
+                      {update?.status?.replace('_', ' ') || 'Not Started'}
+                    </Badge>
+                  </div>
+                </div>
+
                 <CardContent className="p-6 flex-1 flex flex-col gap-6">
                   <div className="space-y-4">
                     <div className="space-y-1">
@@ -334,7 +396,7 @@ export default function EditUnitStatusPage({
 
                     <div className="w-full">
                       <Select
-                        defaultValue={update.status || ''}
+                        value={update.status || ''}
                         onValueChange={(value) =>
                           handleStatusChange(update.id, value)
                         }
@@ -458,12 +520,23 @@ export default function EditUnitStatusPage({
                           Revision History
                         </p>
                         <Select
-                          onValueChange={(val) =>
-                            handleCreateRevision(update.id, parseInt(val))
-                          }
+                          onValueChange={(val) => {
+                            const statusKey = update.status as
+                              | 'submitted'
+                              | 'rejected'
+                            handleCreateRevision(
+                              update.id,
+                              parseInt(val),
+                              statusKey,
+                            )
+                          }}
                           disabled={
                             updatingId?.startsWith('rev-create-') ||
-                            (update.revisions || []).length >= 9
+                            (
+                              update.revisions?.[
+                                update.status as 'submitted' | 'rejected'
+                              ] || []
+                            ).length >= 9
                           }
                         >
                           <SelectTrigger className="h-6 w-auto px-2 text-[9px] gap-1.5 border-none shadow-none text-primary hover:bg-primary/5 cursor-pointer">
@@ -474,7 +547,11 @@ export default function EditUnitStatusPage({
                             {Array.from({ length: 9 }, (_, i) => i)
                               .filter(
                                 (num) =>
-                                  !(update.revisions || []).some(
+                                  !(
+                                    update.revisions?.[
+                                      update.status as 'submitted' | 'rejected'
+                                    ] || []
+                                  ).some(
                                     (r: StatusRevision) =>
                                       r.revision_number === num,
                                   ),
@@ -493,36 +570,45 @@ export default function EditUnitStatusPage({
                       </div>
 
                       <div className="space-y-3">
-                        {[...(update.revisions || [])]
-                          .sort(
-                            (a, b) =>
-                              (a.revision_number || 0) -
-                              (b.revision_number || 0),
-                          )
-                          .map((rev: StatusRevision) => (
-                            <div key={rev.id} className="space-y-1.5">
-                              <div className="flex items-center justify-between">
+                        {(() => {
+                          const statusKey = update.status as
+                            | 'submitted'
+                            | 'rejected'
+                          const revisions = update.revisions?.[statusKey] || []
+                          return [...revisions]
+                            .sort(
+                              (a, b) =>
+                                (a.revision_number || 0) -
+                                (b.revision_number || 0),
+                            )
+                            .map((rev: StatusRevision) => (
+                              <div key={rev.id} className="space-y-1.5">
                                 <Label className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
                                   REV
                                   {String(rev.revision_number).padStart(2, '0')}
                                 </Label>
+                                <Input
+                                  type="date"
+                                  value={formatDate(rev.revision_date)}
+                                  onChange={(e) =>
+                                    handleRevisionDateChange(
+                                      rev.id,
+                                      e.target.value,
+                                    )
+                                  }
+                                  disabled={
+                                    updatingId === `rev-update-${rev.id}`
+                                  }
+                                  className="h-9 text-xs bg-white dark:bg-zinc-950 shadow-none border-zinc-200 dark:border-zinc-800 cursor-pointer"
+                                />
                               </div>
-                              <Input
-                                type="date"
-                                value={formatDate(rev.revision_date)}
-                                onChange={(e) =>
-                                  handleRevisionDateChange(
-                                    rev.id,
-                                    e.target.value,
-                                  )
-                                }
-                                disabled={updatingId === `rev-update-${rev.id}`}
-                                className="h-9 text-xs bg-white dark:bg-zinc-950 shadow-none border-zinc-200 dark:border-zinc-800 cursor-pointer"
-                              />
-                            </div>
-                          ))}
-
-                        {(update.revisions || []).length === 0 && (
+                            ))
+                        })()}
+                        {(
+                          update.revisions?.[
+                            update.status as 'submitted' | 'rejected'
+                          ] || []
+                        ).length === 0 && (
                           <div className="text-center py-4 rounded-md border border-dashed bg-muted/5">
                             <p className="text-[10px] text-muted-foreground italic">
                               No revisions tracked. Click &apos;Add
@@ -596,42 +682,25 @@ export default function EditUnitStatusPage({
                       </div>
                     </div>
                   )}
-
-                  {!update.id && (
-                    <p className="text-[10px] text-destructive font-medium border-t pt-4 mt-auto">
-                      Manual status override not available for this data format.
-                    </p>
-                  )}
                 </CardContent>
               </Card>
             )
           })
         })()}
-
-        {(() => {
-          let updates = unit.status_updates || unit.statusUpdates || []
-          if (updates && !Array.isArray(updates) && 'data' in updates) {
-            updates = updates.data
-          }
-
-          const isEmpty =
-            !updates ||
-            (Array.isArray(updates)
-              ? updates.length === 0
-              : Object.keys(updates).length === 0)
-
-          if (isEmpty) {
-            return (
-              <div className="text-center py-20 border rounded-xl border-dashed bg-muted/20 w-full col-span-full">
-                <p className="text-muted-foreground">
-                  No status update records found for this unit.
-                </p>
-              </div>
-            )
-          }
-          return null
-        })()}
       </div>
+
+      <CopyStatusModal
+        isOpen={copyModalOpen}
+        onClose={() => {
+          setCopyModalOpen(false)
+          setTargetCopyCategory(null)
+        }}
+        onCopy={handleCopyStatus}
+        projectId={projectId}
+        currentUnitId={unitId}
+        targetCategory={targetCopyCategory?.key || ''}
+        targetCategoryLabel={targetCopyCategory?.label || ''}
+      />
     </div>
   )
 }

@@ -224,7 +224,8 @@ function UnitCard({
               'cop_dwg',
               'landing_dwg',
             ].map((key) => {
-              const status = getTechnicalStatus(unit, key)
+              const update = getTechnicalUpdate(unit, key)
+              const status = update?.status
               return (
                 <div key={key} className="flex flex-col gap-1">
                   <span className="text-[9px] uppercase font-bold text-muted-foreground">
@@ -236,6 +237,7 @@ function UnitCard({
                   >
                     {getStatusLabel(status)}
                   </Badge>
+                  {renderTechnicalDetails(update)}
                 </div>
               )
             })}
@@ -356,15 +358,19 @@ function UnitRow({
               'cop_dwg',
               'landing_dwg',
             ].map((key) => {
-              const status = getTechnicalStatus(unit, key)
+              const update = getTechnicalUpdate(unit, key)
+              const status = update?.status
               return (
                 <TableCell key={key} className="text-center">
-                  <Badge
-                    variant={getStatusBadgeVariant(status)}
-                    className="text-[10px] px-2"
-                  >
-                    {getStatusLabel(status)}
-                  </Badge>
+                  <div className="flex flex-col items-center gap-1">
+                    <Badge
+                      variant={getStatusBadgeVariant(status)}
+                      className="text-[10px] px-2"
+                    >
+                      {getStatusLabel(status)}
+                    </Badge>
+                    {renderTechnicalDetails(update)}
+                  </div>
                 </TableCell>
               )
             })}
@@ -630,7 +636,7 @@ function StageCard({
 }
 
 // Technical status helper functions
-function getTechnicalStatus(unit: Unit, key: string) {
+function getTechnicalUpdate(unit: Unit, key: string) {
   if (!unit) return undefined
 
   let updates = unit.status_updates || unit.statusUpdates || []
@@ -644,11 +650,74 @@ function getTechnicalStatus(unit: Unit, key: string) {
     Array.isArray(updates) ? updates : Object.values(updates || {})
   ) as StatusUpdate[]
 
-  const matched = updatesArray.find(
-    (u: StatusUpdate) => u && u.category === key,
-  )
+  return updatesArray.find((u: StatusUpdate) => u && u.category === key)
+}
 
-  return matched?.status
+function renderTechnicalDetails(update?: StatusUpdate) {
+  if (!update || !update.status) return null
+
+  const status = update.status
+  const formatDate = (dateValue: string | number | null | undefined) => {
+    if (!dateValue) return ''
+    try {
+      let date: Date
+      if (typeof dateValue === 'number') {
+        const timestamp = dateValue < 5000000000 ? dateValue * 1000 : dateValue
+        date = new Date(timestamp)
+      } else {
+        const normalized = dateValue.includes(' ')
+          ? dateValue.replace(' ', 'T')
+          : dateValue
+        date = new Date(normalized)
+        if (isNaN(date.getTime())) {
+          const num = Number(dateValue)
+          if (!isNaN(num)) {
+            const timestamp = num < 5000000000 ? num * 1000 : num
+            date = new Date(timestamp)
+          }
+        }
+      }
+      if (isNaN(date.getTime())) return ''
+      return date.toISOString().split('T')[0]
+    } catch {
+      return ''
+    }
+  }
+
+  if (status === 'submitted' || status === 'rejected') {
+    const statusKey = status as 'submitted' | 'rejected'
+    const revisions = update.revisions?.[statusKey] || []
+    if (revisions.length === 0) return null
+    const lastRev = [...revisions].sort(
+      (a, b) => (a.revision_number || 0) - (b.revision_number || 0),
+    )[revisions.length - 1]
+
+    return (
+      <div className="text-[9px] text-muted-foreground font-medium leading-tight whitespace-nowrap">
+        REV{String(lastRev.revision_number).padStart(2, '0')}{' '}
+        {formatDate(lastRev.revision_date)}
+      </div>
+    )
+  }
+
+  if (status === 'approved') {
+    const approvals = update.approvals || []
+    if (approvals.length === 0) return null
+    const lastApproval = approvals[approvals.length - 1]
+    const label =
+      lastApproval.approval_code === 'A'
+        ? 'Code A approved'
+        : 'Code B approved with comment'
+    return (
+      <div className="text-[9px] text-muted-foreground font-medium leading-tight">
+        {label}
+        <br />
+        {formatDate(lastApproval.approved_at)}
+      </div>
+    )
+  }
+
+  return null
 }
 
 function getStatusBadgeVariant(

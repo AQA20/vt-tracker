@@ -39,10 +39,22 @@ export const createStatusApproval = (payload: {
 
 export const createStatusRevision = (payload: {
   status_update_id: string
-  revision_number: number
   revision_date: string
-  pdf_path?: string | null
+  category: string
 }) => api.post(`/status-revisions`, payload)
+
+export const copyUnitStatus = (
+  targetUnitId: string,
+  targetCategory: string,
+  payload: {
+    source_unit_id: string
+    source_status_key: string
+  },
+) =>
+  api.post(
+    `/units/${targetUnitId}/statuses/${targetCategory}/copy-from`,
+    payload,
+  )
 
 export const updateStatusRevision = (id: string, revisionDate: string) =>
   api.patch(`/status-revisions/${id}`, { revision_date: revisionDate })
