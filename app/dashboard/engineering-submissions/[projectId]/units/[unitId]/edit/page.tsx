@@ -619,7 +619,7 @@ export default function EditUnitStatusPage({
                   )}
 
                   {/* PDF Upload/Download Section */}
-                  {!isInProgress && update.id && (
+                  {!isInProgress && update.id && update.status && (
                     <div className="space-y-4 pt-6 border-t border-zinc-100 dark:border-zinc-800 mt-auto">
                       <div className="space-y-1">
                         <p className="text-sm font-medium">
