@@ -800,7 +800,6 @@ function DeleteUnitButton({
     } catch (error) {
       console.error('Failed to delete unit', error)
       // Error is handled by global error handler but we stop loading
-      toast.error('Failed to delete unit')
     } finally {
       setIsDeleting(false)
     }

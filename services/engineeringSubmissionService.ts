@@ -10,7 +10,7 @@ export const getProjectUnits = (projectId: string | number) =>
   api.get(`/projects/${projectId}/units`, {
     params: {
       include:
-        'statusUpdates,status_updates,statusUpdates.revisions,status_updates.revisions,statusUpdates.approvals,status_updates.approvals,stages.tasks',
+        'statusUpdates,status_updates,statusUpdates.revisions,status_updates.revisions,statusUpdates.approvals,status_updates.approvals,stages.tasks,deliveryGroups,deliveryGroups.milestones',
     },
   })
 

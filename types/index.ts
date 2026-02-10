@@ -38,6 +38,49 @@ export interface Unit {
   stages?: Stage[]
   status_updates?: StatusUpdateData
   statusUpdates?: StatusUpdateData
+  delivery_groups?: DeliveryGroup[]
+  supply_chain_reference?: SupplyChainReference
+  sl_reference_no?: string
+  fl_unit_name?: string
+  unit_description?: string
+}
+
+export interface DeliveryGroup {
+  id: string
+  unit_id: string
+  group_name: string
+  group_number: number
+  notes: string | null
+  created_at?: string
+  updated_at?: string
+  milestones?: DeliveryMilestone[]
+}
+
+export interface DeliveryMilestone {
+  id: string
+  delivery_group_id: string
+  milestone_code: string
+  milestone_name: string
+  milestone_label?: string
+  milestone_description?: string
+  planned_leadtime_days: number | null
+  planned_completion_date: string | null
+  actual_completion_date: string | null
+  difference_days: number | null
+  status: 'on-track' | 'overdue' | 'completed-on-time' | 'completed-late'
+  created_at?: string
+  updated_at?: string
+}
+
+export interface SupplyChainReference {
+  id: string
+  unit_id: string
+  dir_reference: string | null
+  csp_reference: string | null
+  source: string | null
+  delivery_terms: string | null
+  created_at?: string
+  updated_at?: string
 }
 
 export interface StatusRevision {
@@ -121,6 +164,9 @@ export interface CreateUnitPayload {
   unit_type: string
   equipment_number: string
   category: string
+  sl_reference_no?: string
+  fl_unit_name?: string
+  unit_description?: string
 }
 
 export interface UpdateTaskPayload {
@@ -138,4 +184,22 @@ export interface CategoryStats {
 
 export interface ProjectStats {
   [key: string]: CategoryStats
+}
+
+export interface CreateDeliveryGroupPayload {
+  group_name: string
+  group_number: number
+}
+
+export interface UpdateDeliveryMilestonePayload {
+  actual_completion_date: string | null
+  planned_completion_date: string | null
+  planned_leadtime_days: number | null
+}
+
+export interface UpdateSupplyChainReferencePayload {
+  dir_reference?: string
+  csp_reference?: string
+  source?: string
+  delivery_terms?: string
 }
