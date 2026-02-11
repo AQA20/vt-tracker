@@ -36,7 +36,7 @@ const formSchema = z.object({
 interface SupplyChainDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  unitId: string
+  deliveryGroupId: string
   initialData?: SupplyChainReference
   onSuccess: () => void
 }
@@ -44,7 +44,7 @@ interface SupplyChainDialogProps {
 export function SupplyChainDialog({
   open,
   onOpenChange,
-  unitId,
+  deliveryGroupId,
   initialData,
   onSuccess,
 }: SupplyChainDialogProps) {
@@ -81,7 +81,7 @@ export function SupplyChainDialog({
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setLoading(true)
     try {
-      await updateSupplyChainReference(unitId, values)
+      await updateSupplyChainReference(deliveryGroupId, values)
       toast.success('References updated successfully')
       onOpenChange(false)
       onSuccess()
@@ -98,7 +98,7 @@ export function SupplyChainDialog({
         <DialogHeader>
           <DialogTitle>Edit Supply Chain References</DialogTitle>
           <DialogDescription>
-            Update supply chain details for this unit.
+            Update supply chain details for this milestone.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>

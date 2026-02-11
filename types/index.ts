@@ -39,7 +39,6 @@ export interface Unit {
   status_updates?: StatusUpdateData
   statusUpdates?: StatusUpdateData
   delivery_groups?: DeliveryGroup[]
-  supply_chain_reference?: SupplyChainReference
   sl_reference_no?: string
   fl_unit_name?: string
   unit_description?: string
@@ -54,6 +53,7 @@ export interface DeliveryGroup {
   created_at?: string
   updated_at?: string
   milestones?: DeliveryMilestone[]
+  supply_chain_reference?: SupplyChainReference | null
 }
 
 export interface DeliveryMilestone {
@@ -74,7 +74,7 @@ export interface DeliveryMilestone {
 
 export interface SupplyChainReference {
   id: string
-  unit_id: string
+  delivery_group_id: string
   dir_reference: string | null
   csp_reference: string | null
   source: string | null
@@ -194,7 +194,6 @@ export interface CreateDeliveryGroupPayload {
 export interface UpdateDeliveryMilestonePayload {
   actual_completion_date: string | null
   planned_completion_date: string | null
-  planned_leadtime_days: number | null
 }
 
 export interface UpdateSupplyChainReferencePayload {

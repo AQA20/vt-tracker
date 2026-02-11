@@ -30,13 +30,11 @@ export function MilestoneDialog({
   const [loading, setLoading] = useState(false)
   const [actualDate, setActualDate] = useState('')
   const [plannedDate, setPlannedDate] = useState('')
-  const [leadtime, setLeadtime] = useState('')
 
   useEffect(() => {
     if (milestone) {
       setActualDate(milestone.actual_completion_date || '')
       setPlannedDate(milestone.planned_completion_date || '')
-      setLeadtime(milestone.planned_leadtime_days?.toString() || '')
     }
   }, [milestone])
 
@@ -49,7 +47,6 @@ export function MilestoneDialog({
       await updateDeliveryMilestone(milestone.id, {
         actual_completion_date: actualDate || null,
         planned_completion_date: plannedDate || null,
-        planned_leadtime_days: leadtime ? parseInt(leadtime) : null,
       })
       onSuccess()
       onOpenChange(false)
@@ -79,38 +76,30 @@ export function MilestoneDialog({
 
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="actual_date" className="text-right">
-                Actual Date
-              </Label>
-              <Input
-                id="actual_date"
-                type="date"
-                value={actualDate}
-                onChange={(e) => setActualDate(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="planned_date" className="text-right">
                 Planned Date
               </Label>
               <Input
                 id="planned_date"
-                type="date"
+                type="text"
+                placeholder="YYYY-MM-DD"
+                pattern="\d{4}-\d{2}-\d{2}"
                 value={plannedDate}
                 onChange={(e) => setPlannedDate(e.target.value)}
                 className="col-span-3"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="leadtime" className="text-right">
-                Leadtime (Days)
+              <Label htmlFor="actual_date" className="text-right">
+                Actual Date
               </Label>
               <Input
-                id="leadtime"
-                type="number"
-                value={leadtime}
-                onChange={(e) => setLeadtime(e.target.value)}
+                id="actual_date"
+                type="text"
+                placeholder="YYYY-MM-DD"
+                pattern="\d{4}-\d{2}-\d{2}"
+                value={actualDate}
+                onChange={(e) => setActualDate(e.target.value)}
                 className="col-span-3"
               />
             </div>

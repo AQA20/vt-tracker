@@ -7,12 +7,18 @@ import { getUnitDeliveryGroups } from '@/services/deliveryTrackingService'
 import { DeliveryTimeline } from '@/components/delivery-tracking/DeliveryTimeline'
 import { MilestoneDialog } from '@/components/delivery-tracking/MilestoneDialog'
 import { CreateGroupDialog } from '@/components/delivery-tracking/CreateGroupDialog'
-import { SupplyChainDialog } from '@/components/delivery-tracking/SupplyChainDialog'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ArrowLeft, Plus, Settings } from 'lucide-react'
-import { DeliveryGroup, DeliveryMilestone, SupplyChainReference } from '@/types'
-import api from '@/services/api' // IDK if we have getUnit helper that includes supply chain ref?
+import { ArrowLeft, Plus } from 'lucide-react'
+import {
+  DeliveryGroup,
+  DeliveryMilestone,
+  Project,
+  StatusRevision,
+  StatusUpdate,
+  Unit,
+} from '@/types'
+import api from '@/services/api'
 
 // We need to fetch unit details to get supply chain ref
 // For now I'll fetch it separately or assume it comes with groups? No, separate.
@@ -28,17 +34,53 @@ export default function UnitDeliveryPage() {
     useState<DeliveryMilestone | null>(null)
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
-  const [supplyChainDialogOpen, setSupplyChainDialogOpen] = useState(false)
 
-  const [supplyChainData, setSupplyChainData] = useState<
-    SupplyChainReference | undefined
-  >(undefined)
+  const [project, setProject] = useState<Project | null>(null)
+  const [unit, setUnit] = useState<Unit | null>(null)
+  const [latestRevision, setLatestRevision] = useState<{
+    number: number
+    date: string
+  } | null>(null)
+
+  const fetchProjectDetails = useCallback(async () => {
+    try {
+      const res = await api.get(`/projects/${projectId}`)
+      setProject(res.data.data)
+    } catch (e) {
+      console.error('Failed to fetch project details', e)
+    }
+  }, [projectId])
 
   const fetchUnitDetails = useCallback(async () => {
-    // Small helper to fetch unit with relationship
     try {
-      const res = await api.get(`/units/${unitId}?include=supplyChainReference`)
-      setSupplyChainData(res.data.data.supply_chain_reference)
+      const res = await api.get(
+        `/units/${unitId}?include=statusUpdates.revisions,status_updates.revisions`,
+      )
+      const unitData = res.data.data
+      setUnit(unitData)
+
+      // Find latest revision from status updates
+      const statusUpdates =
+        unitData.status_updates || unitData.statusUpdates || []
+      let latestRev: { number: number; date: string } | null = null
+
+      statusUpdates.forEach((update: StatusUpdate) => {
+        const revisions = (
+          Array.isArray(update.revisions)
+            ? update.revisions
+            : update.revisions?.submitted || []
+        ) as StatusRevision[]
+        revisions.forEach((rev: StatusRevision) => {
+          if (!latestRev || rev.revision_number > latestRev.number) {
+            latestRev = {
+              number: rev.revision_number,
+              date: rev.revision_date.toString(),
+            }
+          }
+        })
+      })
+
+      setLatestRevision(latestRev)
     } catch (e) {
       console.error('Failed to fetch unit details', e)
     }
@@ -60,7 +102,8 @@ export default function UnitDeliveryPage() {
   useEffect(() => {
     fetchGroups()
     fetchUnitDetails()
-  }, [fetchUnitDetails, fetchGroups])
+    fetchProjectDetails()
+  }, [fetchUnitDetails, fetchGroups, fetchProjectDetails])
 
   const handleMilestoneClick = (milestone: DeliveryMilestone) => {
     setSelectedMilestone(milestone)
@@ -70,11 +113,66 @@ export default function UnitDeliveryPage() {
   const refreshAll = () => {
     fetchGroups()
     fetchUnitDetails()
+    fetchProjectDetails()
   }
 
   return (
     <div className="space-y-6 w-full">
-      <div className="flex items-center justify-between">
+      <div className="bg-muted/30 border rounded-lg p-4 mb-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          <div>
+            <span className="text-muted-foreground">Project Name:</span>
+            <p className="font-medium text-foreground">
+              {project?.name || 'Loading...'}
+            </p>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Project ID:</span>
+            <p className="font-medium font-mono text-foreground">
+              {projectId || 'N/A'}
+            </p>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Revision:</span>
+            <p className="font-medium text-foreground">
+              {latestRevision ? `Rev ${latestRevision.number}` : 'N/A'}
+            </p>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Last Revision Date:</span>
+            <p className="font-medium text-foreground">
+              {latestRevision
+                ? new Date(latestRevision.date).toISOString().split('T')[0]
+                : 'N/A'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-muted/30 border rounded-lg p-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+          <div>
+            <span className="text-muted-foreground">FL name/number:</span>
+            <p className="font-medium text-foreground">
+              {unit?.fl_unit_name || 'N/A'}
+            </p>
+          </div>
+          <div>
+            <span className="text-muted-foreground">Equipment no.:</span>
+            <p className="font-medium text-foreground">
+              {unit?.equipment_number || 'N/A'}
+            </p>
+          </div>
+          <div>
+            <span className="text-muted-foreground">SL Reference no.:</span>
+            <p className="font-medium text-foreground">
+              {unit?.sl_reference_no || 'N/A'}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-4">
           <Link href={`/dashboard/delivery-tracking/${projectId}`}>
             <Button variant="ghost" size="icon" className="h-8 w-8">
@@ -82,28 +180,15 @@ export default function UnitDeliveryPage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight">
               Unit Delivery Timeline
             </h1>
-            <p className="text-sm text-muted-foreground flex items-center gap-2">
+            <p className="text-sm text-muted-foreground flex flex-wrap items-center gap-2">
               <span>Track delivery milestones.</span>
-              {supplyChainData && (
-                <span className="bg-muted px-2 py-0.5 rounded text-xs font-mono">
-                  DIR: {supplyChainData.dir_reference || 'N/A'} | CSP:{' '}
-                  {supplyChainData.csp_reference || 'N/A'}
-                </span>
-              )}
             </p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setSupplyChainDialogOpen(true)}
-          >
-            <Settings className="h-4 w-4 mr-2" />
-            Edit References
-          </Button>
+        <div className="flex flex-col sm:flex-row gap-2">
           <Button onClick={() => setCreateDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Create Group
@@ -139,14 +224,6 @@ export default function UnitDeliveryPage() {
         onOpenChange={setCreateDialogOpen}
         unitId={unitId}
         existingGroups={groups}
-        onSuccess={refreshAll}
-      />
-
-      <SupplyChainDialog
-        open={supplyChainDialogOpen}
-        onOpenChange={setSupplyChainDialogOpen}
-        unitId={unitId}
-        initialData={supplyChainData}
         onSuccess={refreshAll}
       />
     </div>

@@ -33,6 +33,7 @@ export const importDeliveryPlan = (projectId: string, file: File) => {
 }
 
 export const updateSupplyChainReference = (
-  unitId: string,
+  deliveryGroupId: string,
   data: UpdateSupplyChainReferencePayload,
-) => api.patch(`/units/${unitId}/supply-chain-reference`, data)
+) =>
+  api.patch(`/delivery-groups/${deliveryGroupId}/supply-chain-reference`, data)

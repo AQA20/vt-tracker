@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { useDeliveryDashboard } from '@/hooks/useDeliveryDashboard'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -9,26 +8,16 @@ import {
   ChevronLeft,
   ChevronRight,
   Truck,
-  LayoutGrid,
-  Table as TableIcon,
   Building2,
   Briefcase,
   MapPin,
+  LayoutGrid,
 } from 'lucide-react'
 import Link from 'next/link'
-import { DeliveryOverviewTable } from '@/components/delivery-tracking/DeliveryOverviewTable'
 
 export default function DeliveryTrackingPage() {
   const { projects, isLoading, page, totalPages, handlePageChange } =
     useDeliveryDashboard()
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid')
-
-  const allUnits = projects.flatMap((p) =>
-    (p.units || []).map((u) => ({
-      ...u,
-      equipment_number: `${p.name} - ${u.equipment_number}`, // Prefix with project name for clarity in global view
-    })),
-  )
 
   return (
     <div className="flex flex-col gap-8 pb-10">
@@ -41,26 +30,6 @@ export default function DeliveryTrackingPage() {
             Monitor equipment delivery status and milestones across all
             projects.
           </p>
-        </div>
-        <div className="flex items-center border rounded-md p-1 bg-muted/30">
-          <Button
-            variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('grid')}
-            className="h-8 px-2"
-          >
-            <LayoutGrid className="h-4 w-4 mr-1" />
-            Projects
-          </Button>
-          <Button
-            variant={viewMode === 'table' ? 'secondary' : 'ghost'}
-            size="sm"
-            onClick={() => setViewMode('table')}
-            className="h-8 px-2"
-          >
-            <TableIcon className="h-4 w-4 mr-1" />
-            Overview
-          </Button>
         </div>
       </div>
 
@@ -77,8 +46,6 @@ export default function DeliveryTrackingPage() {
           </div>
           <h3 className="mt-4 text-xl font-bold">No projects found</h3>
         </div>
-      ) : viewMode === 'table' ? (
-        <DeliveryOverviewTable units={allUnits} />
       ) : (
         <>
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">

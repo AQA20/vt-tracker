@@ -1,6 +1,6 @@
 'use client'
 
-import { Unit, DeliveryGroup, DeliveryMilestone } from '@/types'
+import { Unit, DeliveryMilestone } from '@/types'
 import {
   Table,
   TableBody,
@@ -9,27 +9,36 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
+import Link from 'next/link'
 
 interface DeliveryOverviewTableProps {
   units: Unit[]
 }
 
-export function DeliveryOverviewTable({ units }: DeliveryOverviewTableProps) {
-  // Key milestone code to show in the overview (Material in Agreed Location)
-  const OVERVIEW_MILESTONE = '3s'
+import { SquarePen } from 'lucide-react'
 
-  // Determine all group numbers present across all units
-  const allGroupNumbers = Array.from(
-    new Set(
-      units.flatMap((u) => u.delivery_groups?.map((g) => g.group_number) || []),
-    ),
-  ).sort((a, b) => a - b)
+export function DeliveryOverviewTable({ units }: DeliveryOverviewTableProps) {
+  // Define constant milestones descriptions
+  const MILESTONES = [
+    { code: '1c', description: 'Receive approved drawings' },
+    { code: '2', description: 'FL sends final specification to SL' },
+    { code: '3', description: 'Point of no return, NRP' },
+    {
+      code: '3s',
+      description:
+        'Material in the place of delivery according to delivery terms',
+    },
+  ]
+
+  // We want to show DG1 to DG12 as requested
+  const dgNumbers = Array.from({ length: 12 }, (_, i) => i + 1)
 
   const getMilestone = (
-    group: DeliveryGroup | undefined,
+    unit: Unit,
+    dgNum: number,
     code: string,
   ): DeliveryMilestone | undefined => {
+    const group = unit.delivery_groups?.find((g) => g.group_number === dgNum)
     return group?.milestones?.find((m) => m.milestone_code === code)
   }
 
@@ -37,49 +46,141 @@ export function DeliveryOverviewTable({ units }: DeliveryOverviewTableProps) {
     if (!dateString) return '-'
     try {
       const date = new Date(dateString)
-      return new Intl.DateTimeFormat('en-GB', {
+      // Special handle for the 1899-12-30 date often seen in Excel exports as null/placeholder
+      if (date.getFullYear() < 1920) return '-'
+      return new Intl.DateTimeFormat('en-CA', {
+        year: 'numeric',
+        month: '2-digit',
         day: '2-digit',
-        month: 'short',
-        year: '2-digit',
       }).format(date)
     } catch {
       return dateString
     }
   }
 
+  // Determine style for actual date cell
+  const getActualStyle = (
+    actualDate: string | null,
+    plannedDate: string | null,
+  ) => {
+    // If no actual date, default style
+    if (!actualDate) return 'bg-background'
+
+    try {
+      const actual = new Date(actualDate)
+      // Check for invalid/placeholder dates
+      if (actual.getFullYear() < 1920) return 'bg-background'
+
+      // If no planned date but actual exists, treat as success (green)
+      if (!plannedDate)
+        return 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200 font-medium'
+
+      const planned = new Date(plannedDate)
+      // Check for invalid/placeholder planned dates
+      if (planned.getFullYear() < 1920)
+        return 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200 font-medium'
+
+      // Compare dates (reset time part for pure date comparison if needed,
+      // but usually these come as YYYY-MM-DD strings so simple comparison works if parsed correctly.
+      // Safe bet is to compare time values)
+      if (actual.getTime() > planned.getTime()) {
+        return 'bg-red-600 text-white font-bold'
+      } else {
+        return 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-200 font-medium'
+      }
+    } catch {
+      return 'bg-background'
+    }
+  }
+
   return (
-    <div className="rounded-md border overflow-x-auto bg-white">
-      <Table>
-        <TableHeader>
-          <TableRow className="bg-muted/50">
-            <TableHead className="w-[150px] sticky left-0 z-10 bg-muted/50 border-r min-w-[150px]">
-              Unit / DG
+    <div className="w-full rounded-md border overflow-x-auto bg-background shadow-sm">
+      <Table className="border-collapse table-auto w-full">
+        <TableHeader className="sticky top-0 z-40">
+          {/* Row 1: FL Elevator name/number */}
+          <TableRow className="bg-muted/50 hover:bg-muted/50">
+            <TableHead
+              className="min-w-[300px] w-[300px] sticky left-0 z-50 bg-muted border-r border-b font-bold text-foreground border-border"
+              colSpan={2}
+            >
+              FL Elevator name/number
             </TableHead>
-            {allGroupNumbers.map((num) => (
+            {units.map((unit) => (
               <TableHead
-                key={`dg-${num}-header`}
-                className="text-center border-r min-w-[200px]"
+                key={`unit-${unit.id}-fl-name`}
+                className="text-center border-r border-b border-border min-w-[200px] font-medium text-muted-foreground bg-background"
                 colSpan={2}
               >
-                Delivery Group {num}
+                {unit.fl_unit_name || '-'}
               </TableHead>
             ))}
           </TableRow>
-          <TableRow className="bg-muted/30">
-            <TableHead className="sticky left-0 z-10 bg-muted/30 border-r">
-              Equipment No
+
+          {/* Row 2: KONE equipment no. */}
+          <TableRow className="bg-muted/50 hover:bg-muted/50">
+            <TableHead
+              className="sticky left-0 z-50 bg-muted border-r border-b font-bold text-foreground border-border"
+              colSpan={2}
+            >
+              KONE equipment no.
             </TableHead>
-            {allGroupNumbers.map((num) => (
+            {units.map((unit) => (
+              <TableHead
+                key={`unit-${unit.id}-equip-no`}
+                className="text-center border-r border-b border-border min-w-[200px] bg-background"
+                colSpan={2}
+              >
+                <div className="flex items-center justify-center gap-2 py-2">
+                  <span className="text-muted-foreground">
+                    {unit.equipment_number || '-'}
+                  </span>
+                  <Link
+                    href={`/dashboard/delivery-tracking/${unit.project_id}/units/${unit.id}`}
+                    className="text-muted-foreground hover:text-primary transition-colors"
+                  >
+                    <SquarePen className="h-3.5 w-3.5" />
+                  </Link>
+                </div>
+              </TableHead>
+            ))}
+          </TableRow>
+
+          {/* Row 3: SL Reference no. */}
+          <TableRow className="bg-muted/50 hover:bg-muted/50">
+            <TableHead
+              className="sticky left-0 z-50 bg-muted border-r border-b font-bold text-foreground border-border"
+              colSpan={2}
+            >
+              SL Reference no.
+            </TableHead>
+            {units.map((unit) => (
+              <TableHead
+                key={`unit-${unit.id}-sl-ref`}
+                className="text-center border-r border-b border-border min-w-[200px] font-medium text-muted-foreground bg-background"
+                colSpan={2}
+              >
+                {unit.sl_reference_no || '-'}
+              </TableHead>
+            ))}
+          </TableRow>
+
+          {/* Row 4: Planned/Actual Labels */}
+          <TableRow className="bg-muted hover:bg-muted">
+            <TableHead
+              className="sticky left-0 z-50 bg-muted border-r border-b border-border"
+              colSpan={2}
+            ></TableHead>
+            {units.map((unit) => (
               <>
                 <TableHead
-                  key={`dg-${num}-planned`}
-                  className="text-xs text-center border-r font-medium"
+                  key={`unit-${unit.id}-planned-header`}
+                  className="text-[10px] uppercase tracking-wider text-center border-r border-b border-border font-bold text-foreground min-w-[100px]"
                 >
                   Planned
                 </TableHead>
                 <TableHead
-                  key={`dg-${num}-actual`}
-                  className="text-xs text-center border-r font-medium"
+                  key={`unit-${unit.id}-actual-header`}
+                  className="text-[10px] uppercase tracking-wider text-center border-r border-b border-border font-bold text-foreground min-w-[100px]"
                 >
                   Actual
                 </TableHead>
@@ -87,47 +188,65 @@ export function DeliveryOverviewTable({ units }: DeliveryOverviewTableProps) {
             ))}
           </TableRow>
         </TableHeader>
-        <TableBody>
-          {units.map((unit) => (
-            <TableRow key={unit.id} className="hover:bg-muted/20">
-              <TableCell className="font-medium sticky left-0 z-10 bg-white border-r whitespace-nowrap">
-                {unit.equipment_number}
-              </TableCell>
-              {allGroupNumbers.map((num) => {
-                const group = unit.delivery_groups?.find(
-                  (g) => g.group_number === num,
-                )
-                const milestone = getMilestone(group, OVERVIEW_MILESTONE)
 
-                return (
-                  <>
+        <TableBody>
+          {dgNumbers.map((dgNum) => (
+            <>
+              {MILESTONES.map((milestone, mIdx) => (
+                <TableRow
+                  key={`dg-${dgNum}-milestone-${milestone.code}`}
+                  className="hover:bg-muted/30 transition-colors"
+                >
+                  {/* Vertical DG label (merges 4 rows) */}
+                  {mIdx === 0 && (
                     <TableCell
-                      key={`unit-${unit.id}-dg-${num}-planned`}
-                      className="text-center border-r py-3"
+                      rowSpan={4}
+                      className="sticky left-0 z-30 bg-muted border-r border-b border-border font-black text-center text-xl text-foreground w-[50px] p-0"
                     >
-                      <span className="text-xs">
-                        {formatDate(milestone?.planned_completion_date || null)}
-                      </span>
+                      <div className="flex flex-col items-center justify-center leading-none tracking-widest uppercase">
+                        <span>D</span>
+                        <span>G</span>
+                        <span className="mt-2">{dgNum}</span>
+                      </div>
                     </TableCell>
-                    <TableCell
-                      key={`unit-${unit.id}-dg-${num}-actual`}
-                      className="text-center border-r py-3"
-                    >
-                      {milestone?.actual_completion_date ? (
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] px-1 bg-green-50 text-green-700 border-green-200"
+                  )}
+
+                  {/* Milestone description */}
+                  <TableCell className="font-semibold border-r border-b border-border text-xs min-w-[250px] whitespace-normal sticky left-[50px] z-30 bg-blue-100 dark:bg-blue-900/50 text-blue-900 dark:text-blue-200">
+                    {milestone.code} ({milestone.description})
+                  </TableCell>
+
+                  {/* Data cells for each unit */}
+                  {units.map((unit) => {
+                    const mData = getMilestone(unit, dgNum, milestone.code)
+                    const actualStyle = getActualStyle(
+                      mData?.actual_completion_date || null,
+                      mData?.planned_completion_date || null,
+                    )
+
+                    return (
+                      <>
+                        <TableCell className="text-center border-r border-b border-border text-[11px] bg-background py-2">
+                          {formatDate(mData?.planned_completion_date || null)}
+                        </TableCell>
+                        <TableCell
+                          className={`text-center border-r border-b border-border text-[11px] py-2 ${actualStyle}`}
                         >
-                          {formatDate(milestone.actual_completion_date)}
-                        </Badge>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                  </>
-                )
-              })}
-            </TableRow>
+                          {formatDate(mData?.actual_completion_date || null)}
+                        </TableCell>
+                      </>
+                    )
+                  })}
+                </TableRow>
+              ))}
+              {/* Spacer row between DGs */}
+              <TableRow className="h-4 bg-muted">
+                <TableCell
+                  colSpan={2 + units.length * 2}
+                  className="p-0 border-b border-border"
+                ></TableCell>
+              </TableRow>
+            </>
           ))}
         </TableBody>
       </Table>
