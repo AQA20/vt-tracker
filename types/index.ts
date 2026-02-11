@@ -83,6 +83,32 @@ export interface SupplyChainReference {
   updated_at?: string
 }
 
+export interface DeliveryModule {
+  id: string
+  name: string
+  contents?: DeliveryModuleContent[]
+}
+
+export interface DeliveryModuleContent {
+  id: string
+  delivery_module_id: string
+  name: string
+  module?: DeliveryModule
+}
+
+export interface DeliveryGroupItem {
+  id: string
+  delivery_group_id: string
+  delivery_module_content_id: string
+  content?: DeliveryModuleContent
+  module_name?: string
+  remarks: string | null
+  package_type: 'Standard Packing' | 'Sea Packing' | 'Bark Free Packing'
+  special_delivery_address: string | null
+  created_at?: string
+  updated_at?: string
+}
+
 export interface StatusRevision {
   id: string
   status_update_id: string

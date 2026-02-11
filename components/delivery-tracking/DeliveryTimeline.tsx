@@ -6,8 +6,9 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import { Edit } from 'lucide-react'
+import { Edit, Package, ChevronDown, ChevronUp } from 'lucide-react'
 import { SupplyChainDialog } from './SupplyChainDialog'
+import { DeliveryGroupItems } from './DeliveryGroupItems'
 
 interface DeliveryTimelineProps {
   groups: DeliveryGroup[]
@@ -20,6 +21,16 @@ export function DeliveryTimeline({
 }: DeliveryTimelineProps) {
   const [selectedGroup, setSelectedGroup] = useState<DeliveryGroup | null>(null)
   const [supplyChainDialogOpen, setSupplyChainDialogOpen] = useState(false)
+  const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
+    {},
+  )
+
+  const toggleGroupItems = (groupId: string) => {
+    setExpandedGroups((prev) => ({
+      ...prev,
+      [groupId]: !prev[groupId],
+    }))
+  }
 
   const getStatusColor = (status: DeliveryMilestone['status']) => {
     switch (status) {
@@ -73,16 +84,37 @@ export function DeliveryTimeline({
                   )}
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0"
-                onClick={(e) => handleEditSupplyChain(group, e)}
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1"
+                  onClick={() => toggleGroupItems(group.id)}
+                >
+                  <Package className="h-4 w-4" />
+                  Items
+                  {expandedGroups[group.id] ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  onClick={(e) => handleEditSupplyChain(group, e)}
+                >
+                  <Edit className="h-4 w-4" />
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
+              {expandedGroups[group.id] && (
+                <div className="mb-6 pb-6 border-b">
+                  <DeliveryGroupItems deliveryGroupId={group.id} />
+                </div>
+              )}
               <div className="relative border-l border-gray-200 ml-4 py-4 space-y-6">
                 {group.milestones?.map((milestone) => (
                   <div key={milestone.id} className="ml-6 relative">
