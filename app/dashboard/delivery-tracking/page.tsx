@@ -15,6 +15,7 @@ import {
   MapPin,
   LayoutGrid,
   Search,
+  Hash,
 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -107,6 +108,19 @@ export default function DeliveryTrackingPage() {
                           </span>
                         </div>
                       </div>
+                      <div className="flex items-center gap-3 text-sm">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-zinc-100 dark:bg-zinc-800 text-muted-foreground shrink-0 transition-colors group-hover:bg-primary/10 group-hover:text-primary">
+                          <Hash className="h-4 w-4" />
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <span className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground/60">
+                            Kone Project ID
+                          </span>
+                          <span className="font-semibold line-clamp-1">
+                            {project.kone_project_id || 'N/A'}
+                          </span>
+                        </div>
+                      </div>
                     </div>
 
                     <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800/50">
@@ -129,7 +143,7 @@ export default function DeliveryTrackingPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handlePageChange(page - 1, searchTerm)}
+                  onClick={() => handlePageChange(page - 1)}
                   disabled={page === 1}
                   className="cursor-pointer h-9 px-3"
                 >

@@ -77,7 +77,7 @@ export default function EngineeringSubmissionsListPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handlePageChange(page - 1, searchTerm)}
+                  onClick={() => handlePageChange(page - 1)}
                   disabled={page === 1}
                   className="cursor-pointer h-9 px-3"
                 >
@@ -99,7 +99,7 @@ export default function EngineeringSubmissionsListPage() {
                             key={p}
                             variant={p === page ? 'default' : 'outline'}
                             size="sm"
-                            onClick={() => handlePageChange(p, searchTerm)}
+                            onClick={() => handlePageChange(p)}
                             className="h-9 w-9 p-0"
                           >
                             {p}
@@ -122,7 +122,7 @@ export default function EngineeringSubmissionsListPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handlePageChange(page + 1, searchTerm)}
+                  onClick={() => handlePageChange(page + 1)}
                   disabled={page === totalPages}
                   className="cursor-pointer h-9 px-3"
                 >
