@@ -5,7 +5,7 @@ import {
 } from '@/services/engineeringSubmissionService'
 import { Project, ProjectStats } from '@/types'
 
-export function useEngineeringDashboard() {
+export function useEngineeringDashboard(searchTerm?: string) {
   const [projects, setProjects] = useState<Project[]>([])
   const [stats, setStats] = useState<Record<string, ProjectStats>>({})
   const [isLoading, setIsLoading] = useState(true)
@@ -14,14 +14,18 @@ export function useEngineeringDashboard() {
   const [perPage, setPerPage] = useState(6)
 
   const fetchDashboardData = useCallback(
-    async (currentPage: number) => {
+    async (currentPage: number, search?: string) => {
       setIsLoading(true)
       try {
-        // Fetch projects with pagination
-        const response = await getProjects({
+        // Fetch projects with pagination and search
+        const params: Record<string, unknown> = {
           page: currentPage,
           per_page: perPage,
-        })
+        }
+        if (search) {
+          params.search = search
+        }
+        const response = await getProjects(params)
 
         // Handle both cases: response.data is the wrapper or response.data is the list
         const responseData = response.data
@@ -60,8 +64,8 @@ export function useEngineeringDashboard() {
   )
 
   useEffect(() => {
-    fetchDashboardData(page)
-  }, [page, fetchDashboardData])
+    fetchDashboardData(page, searchTerm)
+  }, [page, fetchDashboardData, searchTerm])
 
   const handlePageChange = (newPage: number) => {
     if (newPage >= 1 && newPage <= totalPages) {

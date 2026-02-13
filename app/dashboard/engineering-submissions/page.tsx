@@ -1,12 +1,15 @@
 'use client'
 
+import { useState } from 'react'
 import { useEngineeringDashboard } from '@/hooks/useEngineeringDashboard'
 import { ProjectStatsCard } from '@/components/modules/engineering-submissions/ProjectStatsCard'
 import { Button } from '@/components/ui/button'
-import { ChevronLeft, ChevronRight, FileText } from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { ChevronLeft, ChevronRight, FileText, Search } from 'lucide-react'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export default function EngineeringSubmissionsListPage() {
+  const [searchTerm, setSearchTerm] = useState('')
   const {
     projects,
     stats,
@@ -15,7 +18,7 @@ export default function EngineeringSubmissionsListPage() {
     totalPages,
     perPage,
     handlePageChange,
-  } = useEngineeringDashboard()
+  } = useEngineeringDashboard(searchTerm)
 
   return (
     <div className="flex flex-col gap-8 pb-10">
@@ -27,6 +30,15 @@ export default function EngineeringSubmissionsListPage() {
           <p className="text-sm text-muted-foreground">
             Monitor technical submission statuses.
           </p>
+        </div>
+        <div className="relative flex-1 sm:flex-initial sm:w-80">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            placeholder="Search projects..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
         </div>
       </div>
 
@@ -65,7 +77,7 @@ export default function EngineeringSubmissionsListPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handlePageChange(page - 1)}
+                  onClick={() => handlePageChange(page - 1, searchTerm)}
                   disabled={page === 1}
                   className="cursor-pointer h-9 px-3"
                 >
@@ -87,7 +99,7 @@ export default function EngineeringSubmissionsListPage() {
                             key={p}
                             variant={p === page ? 'default' : 'outline'}
                             size="sm"
-                            onClick={() => handlePageChange(p)}
+                            onClick={() => handlePageChange(p, searchTerm)}
                             className="h-9 w-9 p-0"
                           >
                             {p}
@@ -110,7 +122,7 @@ export default function EngineeringSubmissionsListPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handlePageChange(page + 1)}
+                  onClick={() => handlePageChange(page + 1, searchTerm)}
                   disabled={page === totalPages}
                   className="cursor-pointer h-9 px-3"
                 >

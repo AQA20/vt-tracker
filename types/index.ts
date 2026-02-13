@@ -13,6 +13,7 @@ export interface Project {
   name: string
   client_name: string
   location: string
+  kone_project_id: string
   created_at: string
   updated_at: string
   completion_percentage: number
@@ -184,6 +185,7 @@ export interface CreateProjectPayload {
   name: string
   client_name: string
   location: string
+  kone_project_id: string
 }
 
 export interface CreateUnitPayload {

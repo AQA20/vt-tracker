@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useProjectStore } from '@/store/useProjectStore';
 import { Button } from '@/components/ui/button';
-import { Plus, Briefcase, Building2, MapPin, LayoutGrid, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Briefcase, Building2, MapPin, LayoutGrid, ChevronLeft, ChevronRight, Search } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -25,22 +25,24 @@ import { CreateProjectPayload } from '@/types';
 export default function DashboardPage() {
   const { projects, fetchProjects, isLoading, createProject } = useProjectStore();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const [newProject, setNewProject] = useState<CreateProjectPayload>({ 
     name: '', 
     client_name: '',
     location: '', 
+    kone_project_id: '',
   });
 
   useEffect(() => {
-    fetchProjects();
-  }, [fetchProjects]);
+    fetchProjects(1, searchTerm);
+  }, [fetchProjects, searchTerm]);
 
   const handleCreate = async () => {
     if (!newProject.name) return;
     try {
         await createProject(newProject);
         setIsCreateOpen(false);
-        setNewProject({ name: '', client_name: '', location: '' });
+        setNewProject({ name: '', client_name: '', location: '', kone_project_id: '' });
     } catch (e) {
         console.error(e);
     }
@@ -50,7 +52,17 @@ export default function DashboardPage() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Projects</h1>
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+        <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+          <div className="relative flex-1 sm:flex-initial sm:w-80">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search projects..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>
                 <Button className="cursor-pointer w-full sm:w-auto">
                     <Plus className="mr-2 h-4 w-4" /> Create Project
@@ -76,12 +88,17 @@ export default function DashboardPage() {
                         <Label htmlFor="location">Location</Label>
                         <Input id="location" value={newProject.location} onChange={(e) => setNewProject({...newProject, location: e.target.value})} placeholder="New York, NY" />
                     </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="kone_project_id">Kone Project ID</Label>
+                        <Input id="kone_project_id" value={newProject.kone_project_id} onChange={(e) => setNewProject({...newProject, kone_project_id: e.target.value})} placeholder="KP001610" />
+                    </div>
                 </div>
                 <DialogFooter>
                 <Button type="submit" onClick={handleCreate}>Create Project</Button>
                 </DialogFooter>
             </DialogContent>
             </Dialog>
+        </div>
       </div>
 
       {isLoading ? (
@@ -185,7 +202,7 @@ export default function DashboardPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => fetchProjects(useProjectStore.getState().page - 1)}
+                  onClick={() => fetchProjects(useProjectStore.getState().page - 1, searchTerm)}
                   disabled={useProjectStore.getState().page === 1}
                   className="cursor-pointer h-9 px-3"
                 >
@@ -203,7 +220,7 @@ export default function DashboardPage() {
                           key={p}
                           variant={p === currentPage ? "default" : "outline"}
                           size="sm"
-                          onClick={() => fetchProjects(p)}
+                          onClick={() => fetchProjects(p, searchTerm)}
                           className="h-9 w-9 p-0"
                         >
                           {p}
@@ -220,7 +237,7 @@ export default function DashboardPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => fetchProjects(useProjectStore.getState().page + 1)}
+                  onClick={() => fetchProjects(useProjectStore.getState().page + 1, searchTerm)}
                   disabled={useProjectStore.getState().page === useProjectStore.getState().totalPages}
                   className="cursor-pointer h-9 px-3"
                 >

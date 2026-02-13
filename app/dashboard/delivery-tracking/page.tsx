@@ -1,7 +1,9 @@
 'use client'
 
+import { useState } from 'react'
 import { useDeliveryDashboard } from '@/hooks/useDeliveryDashboard'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import {
@@ -12,12 +14,14 @@ import {
   Briefcase,
   MapPin,
   LayoutGrid,
+  Search,
 } from 'lucide-react'
 import Link from 'next/link'
 
 export default function DeliveryTrackingPage() {
+  const [searchTerm, setSearchTerm] = useState('')
   const { projects, isLoading, page, totalPages, handlePageChange } =
-    useDeliveryDashboard()
+    useDeliveryDashboard(searchTerm)
 
   return (
     <div className="flex flex-col gap-8 pb-10">
@@ -30,6 +34,15 @@ export default function DeliveryTrackingPage() {
             Monitor equipment delivery status and milestones across all
             projects.
           </p>
+        </div>
+        <div className="relative flex-1 sm:flex-initial sm:w-80">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            placeholder="Search projects..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
         </div>
       </div>
 
@@ -116,7 +129,7 @@ export default function DeliveryTrackingPage() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handlePageChange(page - 1)}
+                  onClick={() => handlePageChange(page - 1, searchTerm)}
                   disabled={page === 1}
                   className="cursor-pointer h-9 px-3"
                 >

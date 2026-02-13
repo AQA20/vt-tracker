@@ -127,9 +127,9 @@ export default function UnitDeliveryPage() {
             </p>
           </div>
           <div>
-            <span className="text-muted-foreground">Project ID:</span>
+            <span className="text-muted-foreground">Kone Project ID:</span>
             <p className="font-medium font-mono text-foreground">
-              {projectId || 'N/A'}
+              {project?.kone_project_id || 'N/A'}
             </p>
           </div>
           <div>

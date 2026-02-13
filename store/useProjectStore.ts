@@ -19,8 +19,9 @@ interface ProjectState {
   page: number
   totalPages: number
   perPage: number
+  search: string
 
-  fetchProjects: (page?: number) => Promise<void>
+  fetchProjects: (page?: number, search?: string) => Promise<void>
   fetchProjectById: (id: string) => Promise<void>
   createProject: (data: CreateProjectPayload) => Promise<void>
 
@@ -59,13 +60,16 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   page: 1,
   totalPages: 1,
   perPage: 6,
+  search: '',
 
-  fetchProjects: async (page = 1) => {
+  fetchProjects: async (page = 1, search = '') => {
     set({ isLoading: true, error: null })
     try {
-      const response = await api.get('/projects', {
-        params: { page, per_page: 6 },
-      })
+      const params: Record<string, unknown> = { page, per_page: 6 }
+      if (search) {
+        params.search = search
+      }
+      const response = await api.get('/projects', { params })
       const responseData = response.data
       const data =
         responseData.data || (Array.isArray(responseData) ? responseData : [])
@@ -76,6 +80,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         page,
         totalPages: meta.last_page || (meta.lastPage ?? 1),
         perPage: meta.per_page || (meta.perPage ?? 6),
+        search,
       })
     } catch (error: unknown) {
       const message =
@@ -104,7 +109,7 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
   createProject: async (data) => {
     try {
       await api.post('/projects', data)
-      await get().fetchProjects()
+      await get().fetchProjects(get().page, get().search)
     } catch (error) {
       throw error
     }
