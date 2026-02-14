@@ -26,7 +26,7 @@ export function useUnitsQuery(
           search: params.search || undefined,
           per_page: params.perPage,
           include:
-            'statusUpdates,status_updates,statusUpdates.revisions,status_updates.revisions,statusUpdates.approvals,status_updates.approvals,stages.tasks',
+            'statusUpdates,status_updates,statusUpdates.revisions,status_updates.revisions,statusUpdates.approvals,status_updates.approvals,stages.template,stages.tasks.template',
         },
       })
       const data = response.data.data || response.data

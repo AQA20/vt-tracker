@@ -150,12 +150,12 @@ export interface StatusUpdate {
 export interface Stage {
   id: string
   unit_id: string
-  stage_template_id: number
+  stage_template_id: string
   status: string
   started_at: string | null
   completed_at: string | null
   template: {
-    id: number
+    id: string
     name: string
     title?: string
     description?: string
@@ -168,12 +168,12 @@ export interface Stage {
 export interface Task {
   id: string
   unit_stage_id: string
-  task_template_id: number
+  task_template_id: string
   status: string
   measured_value: number | null
   notes: string | null
   template: {
-    id: number
+    id: string
     name: string
     task_code: string
     description?: string

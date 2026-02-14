@@ -44,7 +44,7 @@ export function StageWorkflow({ unit }: { unit: Unit }) {
 
   const groupedStages = unit.stages.reduce(
     (acc, stage) => {
-      const group = stage.template.progress_group || 'General'
+      const group = stage?.template?.progress_group || 'General'
       if (!acc[group]) acc[group] = []
       acc[group].push(stage)
       return acc
@@ -141,9 +141,9 @@ function StageCard({
           </div>
           <div>
             <h5 className="font-medium text-sm">
-              {stage.template.title || stage.template.name}
+              {stage?.template?.title || stage?.template?.name || 'Unknown Stage'}
             </h5>
-            {stage.template.description && (
+            {stage?.template?.description && (
               <p className="text-xs text-muted-foreground mt-1">
                 {stage.template.description}
               </p>
