@@ -1,86 +1,30 @@
-import { useState, useCallback, useEffect } from 'react'
-import {
-  getProjects,
-  getProjectStats,
-} from '@/services/engineeringSubmissionService'
-import { Project, ProjectStats } from '@/types'
+import { useState } from 'react'
+import { useEngineeringProjectsQuery } from '@/hooks/queries/useEngineeringProjectsQuery'
+import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 
 export function useEngineeringDashboard(searchTerm?: string) {
-  const [projects, setProjects] = useState<Project[]>([])
-  const [stats, setStats] = useState<Record<string, ProjectStats>>({})
-  const [isLoading, setIsLoading] = useState(true)
   const [page, setPage] = useState(1)
-  const [totalPages, setTotalPages] = useState(1)
-  const [perPage, setPerPage] = useState(6)
+  const debouncedSearch = useDebouncedValue(searchTerm ?? '')
 
-  const fetchDashboardData = useCallback(
-    async (currentPage: number, search?: string) => {
-      setIsLoading(true)
-      try {
-        // Fetch projects with pagination and search
-        const params: Record<string, unknown> = {
-          page: currentPage,
-          per_page: perPage,
-        }
-        if (search) {
-          params.search = search
-        }
-        const response = await getProjects(params)
-
-        // Handle both cases: response.data is the wrapper or response.data is the list
-        const responseData = response.data
-        const projectsData =
-          responseData.data || (Array.isArray(responseData) ? responseData : [])
-        const meta = responseData.meta || {}
-
-        setProjects(projectsData)
-        setTotalPages(meta.last_page || (meta.lastPage ?? 1))
-        if (meta.per_page || meta.perPage) {
-          setPerPage(meta.per_page || meta.perPage)
-        }
-
-        // Fetch stats for each project concurrently
-        const statsPromises = projectsData.map((p: Project) =>
-          getProjectStats(p.id).then((res) => ({
-            id: p.id,
-            data: res.data.data || res.data,
-          })),
-        )
-
-        const statsResults = await Promise.all(statsPromises)
-        const newStats: Record<string, ProjectStats> = {}
-        statsResults.forEach((res) => {
-          newStats[res.id] = res.data
-        })
-
-        setStats(newStats)
-      } catch (error) {
-        console.error('Failed to fetch engineering dashboard data', error)
-      } finally {
-        setIsLoading(false)
-      }
-    },
-    [perPage],
-  )
-
-  useEffect(() => {
-    fetchDashboardData(page, searchTerm)
-  }, [page, fetchDashboardData, searchTerm])
+  const { data, isLoading } = useEngineeringProjectsQuery({
+    page,
+    search: debouncedSearch,
+  })
 
   const handlePageChange = (newPage: number) => {
+    const totalPages = data?.meta.last_page ?? 1
     if (newPage >= 1 && newPage <= totalPages) {
       setPage(newPage)
     }
   }
 
   return {
-    projects,
-    stats,
+    projects: data?.projects ?? [],
+    stats: data?.stats ?? {},
     isLoading,
     page,
-    totalPages,
-    perPage,
+    totalPages: data?.meta.last_page ?? 1,
+    perPage: data?.meta.per_page ?? 6,
     handlePageChange,
-    refresh: () => fetchDashboardData(page),
   }
 }

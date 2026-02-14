@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useProjectStore } from '@/store/useProjectStore';
+import { useRideComfortQuery } from '@/hooks/queries/useRideComfortQuery';
+import { useSubmitRideComfort } from '@/hooks/mutations/useSubmitRideComfort';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
@@ -48,8 +49,8 @@ const getValidDeviceValue = (input: string) => {
 };
 
 export function RideComfortForm({ unitId }: RideComfortFormProps) {
-  const { fetchRideComfortData, submitRideComfortData } = useProjectStore();
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: rideData, isLoading } = useRideComfortQuery(unitId);
+  const submitRideComfort = useSubmitRideComfort(unitId);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     vibration_value: 0,
@@ -60,27 +61,17 @@ export function RideComfortForm({ unitId }: RideComfortFormProps) {
   });
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const data = await fetchRideComfortData(unitId);
-        if (data && typeof data === 'object') {
-          const d = data as Record<string, unknown>;
-          setFormData({
-            vibration_value: (d.vibration_value as number) ?? 0,
-            noise_db: (d.noise_db as number) ?? 0,
-            jerk_value: (d.jerk_value as number) ?? 0,
-            device_used: getValidDeviceValue((d.device_used as string) || 'eva_625'),
-            notes: (d.notes as string) ?? '',
-          });
-        }
-      } catch (err) {
-        console.error("Error loading ride comfort data:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    loadData();
-  }, [unitId, fetchRideComfortData]);
+    if (rideData && typeof rideData === 'object') {
+      const d = rideData as Record<string, unknown>;
+      setFormData({
+        vibration_value: (d.vibration_value as number) ?? 0,
+        noise_db: (d.noise_db as number) ?? 0,
+        jerk_value: (d.jerk_value as number) ?? 0,
+        device_used: getValidDeviceValue((d.device_used as string) || 'eva_625'),
+        notes: (d.notes as string) ?? '',
+      });
+    }
+  }, [rideData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,16 +85,10 @@ export function RideComfortForm({ unitId }: RideComfortFormProps) {
       device_used: finalDevice
     };
 
-    console.log('STRICT Submitting Payload:', payload);
-
     try {
-      await submitRideComfortData(unitId, payload);
-      // Optional: show success via a local mechanism if global alert is only for errors
+      await submitRideComfort.mutateAsync(payload);
     } catch (err: unknown) {
       console.error("Submission failed!", err);
-      // The global interceptor will catch this error, but we can log more details
-      console.table(payload);
-      console.log(`(Sent: ${finalDevice})`);
     } finally {
       setIsSubmitting(false);
     }

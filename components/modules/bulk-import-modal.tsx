@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { useProjectStore } from '@/store/useProjectStore';
+import { useCreateUnit } from '@/hooks/mutations/useCreateUnit';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -25,6 +26,8 @@ export function BulkImportModal({ isOpen, onClose, projectId }: BulkImportModalP
   const [file, setFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const createUnit = useCreateUnit(projectId);
+  const queryClient = useQueryClient();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.files && e.target.files[0]) {
@@ -37,8 +40,6 @@ export function BulkImportModal({ isOpen, onClose, projectId }: BulkImportModalP
       if (!file) return;
       setIsUploading(true);
       setError(null);
-      
-      const { units, createUnit, fetchUnits } = useProjectStore.getState();
 
       Papa.parse(file, {
           header: true,
@@ -73,14 +74,6 @@ export function BulkImportModal({ isOpen, onClose, projectId }: BulkImportModalP
                       
                       if (!equipmentNumber) continue;
 
-                      // Check for duplicates in existing units
-                      const exists = units.some(u => u.equipment_number === equipmentNumber);
-                      if (exists) {
-                          setError(`Row ${i + 1}: Unit with equipment number "${equipmentNumber}" already exists in this project.`);
-                          setIsUploading(false);
-                          return;
-                      }
-
                       if (rawCategory !== 'elevator') {
                           setError(`Row ${i + 1}: Category "${row.category}" is not supported. Only elevators are supported for bulk import at the moment.`);
                           setIsUploading(false);
@@ -97,7 +90,7 @@ export function BulkImportModal({ isOpen, onClose, projectId }: BulkImportModalP
                           continue; // Skip rows without unit_type
                       }
 
-                      await createUnit(projectId, payload);
+                      await createUnit.mutateAsync(payload);
                   }
                   
                   setIsUploading(false);
@@ -107,7 +100,7 @@ export function BulkImportModal({ isOpen, onClose, projectId }: BulkImportModalP
                   setError("Failed to import some units. Please check the file format.");
                   setIsUploading(false);
                   // Refresh units anyway to show what was imported
-                  fetchUnits(projectId);
+                  queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'units'] });
               }
           },
           error: (err) => {

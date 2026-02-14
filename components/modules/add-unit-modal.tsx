@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useProjectStore } from '@/store/useProjectStore'
+import { useCreateUnit } from '@/hooks/mutations/useCreateUnit'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -32,7 +32,7 @@ export function AddUnitModal({
   onClose,
   projectId,
 }: AddUnitModalProps) {
-  const { createUnit } = useProjectStore()
+  const createUnit = useCreateUnit(projectId)
   const [formData, setFormData] = useState({
     unit_type: 'KONE MonoSpace 700',
     equipment_number: '',
@@ -44,7 +44,7 @@ export function AddUnitModal({
 
   const handleSubmit = async () => {
     try {
-      await createUnit(projectId, formData)
+      await createUnit.mutateAsync(formData)
       onClose()
       setFormData({
         unit_type: 'KONE MonoSpace 700',

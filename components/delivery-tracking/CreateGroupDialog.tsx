@@ -55,7 +55,7 @@ export function CreateGroupDialog({
 
   const form = useForm<z.infer<typeof formSchema>>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    resolver: zodResolver(formSchema) as any,
+    resolver: zodResolver(formSchema as any) as any,
     defaultValues: {
       name: '',
     },
