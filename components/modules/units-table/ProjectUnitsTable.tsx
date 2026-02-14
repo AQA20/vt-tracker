@@ -43,9 +43,6 @@ export function ProjectUnitsTable({ units, projectId }: ProjectUnitsTableProps) 
             <TableRow>
               <TableHead className="w-12.5"></TableHead>
               <TableHead>Equipment Number</TableHead>
-              <TableHead>SL Reference No.</TableHead>
-              <TableHead>FL Unit Name</TableHead>
-              <TableHead>Unit Description</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Category</TableHead>
               <TableHead className="w-45">Installation</TableHead>
@@ -235,9 +232,6 @@ function ProjectUnitRow({ unit }: { unit: Unit }) {
           )}
         </TableCell>
         <TableCell className="font-medium">{unit.equipment_number}</TableCell>
-        <TableCell>{unit.sl_reference_no || '-'}</TableCell>
-        <TableCell>{unit.fl_unit_name || '-'}</TableCell>
-        <ExpandableDescriptionCell description={unit.unit_description} />
         <TableCell className="max-w-37.5 truncate">{unit.unit_type}</TableCell>
         <TableCell><Badge variant="outline">{unit.category}</Badge></TableCell>
         <TableCell>
