@@ -144,28 +144,23 @@ export function UnitsTable({
                 <TableHead className="w-12.5"></TableHead>
               )}
               <TableHead>Equipment Number</TableHead>
-              <TableHead>SL Reference No.</TableHead>
-              <TableHead>FL Unit Name</TableHead>
-              <TableHead>Unit Description</TableHead>
-              {view === 'standard' ? (
-                <>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead className="w-45">Installation</TableHead>
-                  <TableHead className="w-45">Commissioning</TableHead>
-                  <TableHead className="w-45">Average Progress</TableHead>
-                  <TableHead className="text-right">Stage</TableHead>
-                </>
-              ) : (
-                <>
-                  <TableHead className="text-center">Tech Sub</TableHead>
-                  <TableHead className="text-center">Sample</TableHead>
-                  <TableHead className="text-center">Layout</TableHead>
-                  <TableHead className="text-center">Car M DWG</TableHead>
-                  <TableHead className="text-center">COP DWG</TableHead>
-                  <TableHead className="text-center">Landing DWG</TableHead>
-                </>
-              )}
+              {view === 'standard' && <TableHead>SL Reference No.</TableHead>}
+              {view === 'standard' && <TableHead>FL Unit Name</TableHead>}
+              {view === 'standard' && <TableHead>Unit Description</TableHead>}
+              {view === 'standard' && <TableHead>Type</TableHead>}
+              {view === 'standard' && <TableHead>Category</TableHead>}
+              {view === 'standard' && <TableHead className="w-45">Installation</TableHead>}
+              {view === 'standard' && <TableHead className="w-45">Commissioning</TableHead>}
+              {view === 'standard' && <TableHead className="w-45">Average Progress</TableHead>}
+              {view === 'technical' && <>
+                <TableHead>Category</TableHead>
+                <TableHead className="text-center">Tech Sub</TableHead>
+                <TableHead className="text-center">Sample</TableHead>
+                <TableHead className="text-center">Layout</TableHead>
+                <TableHead className="text-center">Car M DWG</TableHead>
+                <TableHead className="text-center">COP DWG</TableHead>
+                <TableHead className="text-center">Landing DWG</TableHead>
+              </>}
               {showActions && (
                 <TableHead className="text-right w-25">Actions</TableHead>
               )}
@@ -211,66 +206,87 @@ function UnitCard({
   }
 
 
-  // Show unit data and technical statuses on mobile for technical view
-  if (view === 'technical') {
+  // Strict separation: mobile card for each view
+  if (typeof window !== 'undefined' && window.innerWidth < 768) {
+    if (view === 'technical') {
+      // Engineering submissions: ONLY equipment number, category, actions, and technical statuses
+      return (
+        <div className={cn('rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden')}>
+          <div className="p-4">
+            <div className="flex items-center justify-between mb-2">
+              <span className="block font-bold text-sm">{unit.equipment_number}</span>
+              <Badge variant="outline" className="text-[10px] px-1.5 h-4">{unit.category}</Badge>
+              {showActions && (
+                <div className="flex items-center gap-1 ml-2">
+                  <Link href={`/dashboard/engineering-submissions/${projectId}/units/${unit.id}/edit`}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 cursor-pointer">
+                      <SquarePen className="h-4 w-4" />
+                    </Button>
+                  </Link>
+                  <DeleteUnitButton unitId={unit.id} onDeleted={() => {}} />
+                </div>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-2 border-t pt-4">
+              {[
+                'tech',
+                'sample',
+                'layout',
+                'car_m_dwg',
+                'cop_dwg',
+                'landing_dwg',
+              ].map((key) => {
+                const update = getTechnicalUpdate(unit, key)
+                const status = update?.status
+                return (
+                  <div key={key} className="flex flex-col gap-1">
+                    <span className="text-[9px] uppercase font-bold text-muted-foreground">{getCategoryLabel(key)}</span>
+                    <Badge variant={getStatusBadgeVariant(status)} className="w-fit text-[10px] px-1.5 h-5">{getStatusLabel(status)}</Badge>
+                    {renderTechnicalDetails(update)}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+      )
+    }
+    // Project units: show full project details only
     return (
       <div className={cn('rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden')}>
         <div className="p-4">
-          <div className="mb-2">
+          <div className="flex items-center justify-between mb-2">
             <span className="block font-bold text-sm">{unit.equipment_number}</span>
-            <div className="text-xs text-muted-foreground">
-              <span className="font-semibold">SL Reference No.:</span> {unit.sl_reference_no || '-'}
+            <Badge variant="outline" className="text-[10px] px-1.5 h-4">{unit.category}</Badge>
+          </div>
+          <div className="mb-2 text-xs text-muted-foreground">
+            <div><span className="font-semibold">SL Ref:</span> {unit.sl_reference_no || '-'}</div>
+            <div><span className="font-semibold">FL Unit Name:</span> {unit.fl_unit_name || '-'}</div>
+            <ExpandableDescriptionCard description={unit.unit_description} />
+          </div>
+          <div className="grid grid-cols-3 gap-3 mb-2">
+            <div className="space-y-1">
+              <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">Installation</span>
+              <div className="flex items-center gap-2">
+                <Progress value={Number(unit.installation_progress || 0)} className="h-1.5" />
+                <span className="text-[10px] font-medium w-7 text-right">{Number(unit.installation_progress || 0).toFixed(0)}%</span>
+              </div>
             </div>
-            <div className="text-xs text-muted-foreground">
-              <span className="font-semibold">FL Unit Name:</span> {unit.fl_unit_name || '-'}
+            <div className="space-y-1">
+              <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">Commissioning</span>
+              <div className="flex items-center gap-2">
+                <Progress value={Number(unit.commissioning_progress || 0)} className="h-1.5" />
+                <span className="text-[10px] font-medium w-7 text-right">{Number(unit.commissioning_progress || 0).toFixed(0)}%</span>
+              </div>
             </div>
-            <div className="text-xs text-muted-foreground">
-              <span className="font-semibold">Unit Description:</span> {unit.unit_description || '-'}
+            <div className="space-y-1">
+              <span className="text-[10px] text-primary uppercase font-bold tracking-tight">Average</span>
+              <div className="flex items-center gap-2">
+                <Progress value={Number(unit.progress_percent || 0)} className="h-1.5" />
+                <span className="text-[10px] font-bold text-primary w-7 text-right">{Number(unit.progress_percent || 0).toFixed(0)}%</span>
+              </div>
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-2 border-t pt-4">
-            {[
-              'tech',
-              'sample',
-              'layout',
-              'car_m_dwg',
-              'cop_dwg',
-              'landing_dwg',
-            ].map((key) => {
-              const update = getTechnicalUpdate(unit, key)
-              const status = update?.status
-              return (
-                <div key={key} className="flex flex-col gap-1">
-                  <span className="text-[9px] uppercase font-bold text-muted-foreground">
-                    {getCategoryLabel(key)}
-                  </span>
-                  <Badge
-                    variant={getStatusBadgeVariant(status)}
-                    className="w-fit text-[10px] px-1.5 h-5"
-                  >
-                    {getStatusLabel(status)}
-                  </Badge>
-                  {renderTechnicalDetails(update)}
-                </div>
-              )
-            })}
-          </div>
-          {showActions && (
-            <div className="flex items-center gap-1 mt-2">
-              <Link
-                href={`/dashboard/engineering-submissions/${projectId}/units/${unit.id}/edit`}
-              >
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 cursor-pointer"
-                >
-                  <SquarePen className="h-4 w-4" />
-                </Button>
-              </Link>
-              <DeleteUnitButton unitId={unit.id} onDeleted={() => {}} />
-            </div>
-          )}
         </div>
       </div>
     )
@@ -417,60 +433,36 @@ function UnitRow({
           </TableCell>
         )}
         <TableCell className="font-medium">{unit.equipment_number}</TableCell>
-        <TableCell>{unit.sl_reference_no || '-'}</TableCell>
-        <TableCell>{unit.fl_unit_name || '-'}</TableCell>
-        <ExpandableDescriptionCell description={unit.unit_description} />
-        {view === 'standard' ? (
+        {view === 'standard' && <TableCell>{unit.sl_reference_no || '-'}</TableCell>}
+        {view === 'standard' && <TableCell>{unit.fl_unit_name || '-'}</TableCell>}
+        {view === 'standard' && <ExpandableDescriptionCell description={unit.unit_description} />}
+        {view === 'standard' && (
           <>
-            <TableCell className="max-w-37.5 truncate">
-              {unit.unit_type}
-            </TableCell>
-            <TableCell>
-              <Badge variant="outline">{unit.category}</Badge>
-            </TableCell>
+            <TableCell className="max-w-37.5 truncate">{unit.unit_type}</TableCell>
+            <TableCell><Badge variant="outline">{unit.category}</Badge></TableCell>
             <TableCell>
               <div className="flex items-center gap-2">
-                <Progress
-                  value={Number(unit.installation_progress || 0)}
-                  className="h-2"
-                />
-                <span className="text-xs text-muted-foreground w-10">
-                  {Number(unit.installation_progress || 0).toFixed(0)}%
-                </span>
+                <Progress value={Number(unit.installation_progress || 0)} className="h-2" />
+                <span className="text-xs text-muted-foreground w-10">{Number(unit.installation_progress || 0).toFixed(0)}%</span>
               </div>
             </TableCell>
             <TableCell>
               <div className="flex items-center gap-2">
-                <Progress
-                  value={Number(unit.commissioning_progress || 0)}
-                  className="h-2"
-                />
-                <span className="text-xs text-muted-foreground w-10">
-                  {Number(unit.commissioning_progress || 0).toFixed(0)}%
-                </span>
+                <Progress value={Number(unit.commissioning_progress || 0)} className="h-2" />
+                <span className="text-xs text-muted-foreground w-10">{Number(unit.commissioning_progress || 0).toFixed(0)}%</span>
               </div>
             </TableCell>
             <TableCell>
               <div className="flex items-center gap-2">
-                <Progress
-                  value={Number(unit.progress_percent || 0)}
-                  className="h-2"
-                />
-                <span className="text-xs text-muted-foreground w-10">
-                  {Number(unit.progress_percent || 0).toFixed(0)}%
-                </span>
+                <Progress value={Number(unit.progress_percent || 0)} className="h-2" />
+                <span className="text-xs text-muted-foreground w-10">{Number(unit.progress_percent || 0).toFixed(0)}%</span>
               </div>
-            </TableCell>
-            <TableCell className="text-right">
-              <Badge variant={completedStages === 8 ? 'default' : 'secondary'}>
-                {completedStages === 8
-                  ? 'Complete'
-                  : `Stage ${completedStages + 1}/8`}
-              </Badge>
             </TableCell>
           </>
-        ) : (
+        )}
+        {view === 'technical' && (
           <>
+            <TableCell><Badge variant="outline">{unit.category}</Badge></TableCell>
             {[
               'tech',
               'sample',
@@ -484,12 +476,7 @@ function UnitRow({
               return (
                 <TableCell key={key} className="text-center">
                   <div className="flex flex-col items-center gap-1">
-                    <Badge
-                      variant={getStatusBadgeVariant(status)}
-                      className="text-[10px] px-2"
-                    >
-                      {getStatusLabel(status)}
-                    </Badge>
+                    <Badge variant={getStatusBadgeVariant(status)} className="text-[10px] px-2">{getStatusLabel(status)}</Badge>
                     {renderTechnicalDetails(update)}
                   </div>
                 </TableCell>

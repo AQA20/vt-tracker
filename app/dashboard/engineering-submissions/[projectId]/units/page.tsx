@@ -4,6 +4,7 @@ import { useEffect, use, useState } from 'react'
 import { useProjectStore } from '@/store/useProjectStore'
 import { UnitsTable } from '@/components/modules/units-table'
 import { Button } from '@/components/ui/button'
+import { Pagination } from '@/components/ui/pagination'
 import { Input } from '@/components/ui/input'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import Link from 'next/link'
@@ -169,69 +170,20 @@ export default function ProjectUnitsPage({
             ))}
           </div>
         ) : (
-          <UnitsTable
-            units={units}
-            projectId={projectId}
-            view="technical"
-            showActions={true}
-          />
+          <>
+            <UnitsTable
+              units={units}
+              projectId={projectId}
+              view="technical"
+              showActions={true}
+            />
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onPageChange={(p) => fetchUnits(projectId, p, searchTerm)}
+            />
+          </>
         )}
-
-      {/* Pagination Controls */}
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-8">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fetchUnits(projectId, page - 1, searchTerm)}
-            disabled={page === 1}
-            className="cursor-pointer h-9 px-3"
-          >
-            <span className="hidden sm:inline">Previous</span>
-          </Button>
-          <div className="flex items-center gap-1">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
-              if (
-                p === 1 || 
-                p === totalPages ||
-                (p >= page - 1 && p <= page + 1)
-              ) {
-                return (
-                  <Button
-                    key={p}
-                    variant={p === page ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => fetchUnits(projectId, p, searchTerm)}
-                    className="h-9 w-9 p-0"
-                  >
-                    {p}
-                  </Button>
-                )
-              }
-              if (p === page - 2 || p === page + 2) {
-                return (
-                  <span key={p} className="px-1 text-muted-foreground">
-                    ...
-                  </span>
-                )
-              }
-              return null
-            })}
-          </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fetchUnits(projectId, page + 1, searchTerm)}
-            disabled={page === totalPages}
-            className="cursor-pointer h-9 px-3"
-          >
-            <span className="hidden sm:inline">Next</span>
-          </Button>
-        </div>
-        <div className="text-sm text-muted-foreground font-medium">
-          Page {page} of {totalPages}
-        </div>
-      </div>
       </div>
     </div>
   )

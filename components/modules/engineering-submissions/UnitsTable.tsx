@@ -46,7 +46,7 @@ export function UnitsTable({ units }: UnitsTableProps) {
               <TableCell className="py-2 text-xs font-medium">
                 {unit.equipment_number}
               </TableCell>
-              <TableCell className="py-2 text-xs text-muted-foreground truncate max-w-[120px]">
+              <TableCell className="py-2 text-xs text-muted-foreground">
                 {unit.unit_type}
               </TableCell>
               <TableCell className="py-2">
