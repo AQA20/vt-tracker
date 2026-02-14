@@ -23,6 +23,7 @@ import {
 } from './helpers'
 import { DeleteUnitButton } from './DeleteUnitButton'
 import { EmptyUnitsState } from './EmptyUnitsState'
+import { TechnicalUnitsTableSkeleton } from '@/components/skeletons/TechnicalUnitsTableSkeleton'
 
 const TECHNICAL_KEYS = ['tech', 'sample', 'layout', 'car_m_dwg', 'cop_dwg', 'landing_dwg'] as const
 
@@ -30,13 +31,19 @@ interface TechnicalUnitsTableProps {
   units: Unit[]
   projectId: string
   showActions?: boolean
+  isLoading?: boolean
 }
 
 export function TechnicalUnitsTable({
   units,
   projectId,
   showActions = true,
+  isLoading = false,
 }: TechnicalUnitsTableProps) {
+  if (isLoading) {
+    return <TechnicalUnitsTableSkeleton showActions={showActions} />
+  }
+
   if (units.length === 0) return <EmptyUnitsState />
 
   return (
@@ -185,3 +192,4 @@ function TechnicalUnitRow({
     </TableRow>
   )
 }
+

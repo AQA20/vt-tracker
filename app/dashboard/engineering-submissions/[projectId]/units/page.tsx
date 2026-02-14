@@ -57,29 +57,17 @@ export default function ProjectUnitsPage({
       </div>
 
       <div className="w-full">
-        {isLoading ? (
-          <div className="flex flex-col gap-4 py-4">
-            {[1, 2, 3, 4, 5].map((i) => (
-              <div
-                key={i}
-                className="h-12 w-full bg-muted animate-pulse rounded"
-              />
-            ))}
-          </div>
-        ) : (
-          <>
-            <TechnicalUnitsTable
-              units={units}
-              projectId={projectId}
-              showActions={true}
-            />
-            <Pagination
-              page={page}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-            />
-          </>
-        )}
+        <TechnicalUnitsTable
+          units={units}
+          projectId={projectId}
+          showActions={true}
+          isLoading={isLoading}
+        />
+        <Pagination
+          page={page}
+          totalPages={totalPages}
+          onPageChange={handlePageChange}
+        />
       </div>
     </div>
   )

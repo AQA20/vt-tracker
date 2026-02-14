@@ -15,16 +15,22 @@ import { ChevronDown, ChevronRight } from 'lucide-react'
 import { useState, useMemo } from 'react'
 import { cn } from '@/lib/utils'
 import { useUnitStagesQuery } from '@/hooks/queries/useUnitStagesQuery'
-import { ExpandableDescriptionCell, ExpandableDescriptionCard } from './ExpandableDescription'
+import { ExpandableDescriptionCard } from './ExpandableDescription'
 import { StageWorkflow } from './StageWorkflow'
 import { EmptyUnitsState } from './EmptyUnitsState'
+import { ProjectUnitsTableSkeleton } from '@/components/skeletons/ProjectUnitsTableSkeleton'
 
 interface ProjectUnitsTableProps {
   units: Unit[]
   projectId: string
+  isLoading?: boolean
 }
 
-export function ProjectUnitsTable({ units, projectId }: ProjectUnitsTableProps) {
+export function ProjectUnitsTable({ units, projectId, isLoading = false }: ProjectUnitsTableProps) {
+  if (isLoading) {
+    return <ProjectUnitsTableSkeleton />
+  }
+
   if (units.length === 0) return <EmptyUnitsState />
 
   return (
@@ -271,3 +277,4 @@ function ProjectUnitRow({ unit }: { unit: Unit }) {
     </>
   )
 }
+

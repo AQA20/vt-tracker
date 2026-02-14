@@ -77,7 +77,7 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ projec
         completionPercentage={currentProject.completion_percentage || 0}
       />
 
-      <ProjectUnitsTable units={units} projectId={id} />
+      <ProjectUnitsTable units={units} projectId={id} isLoading={isLoading} />
 
       <Pagination
         page={page}
