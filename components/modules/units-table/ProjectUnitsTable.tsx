@@ -260,6 +260,7 @@ function ProjectUnitRow({ unit }: { unit: Unit }) {
               <div className="mb-2 grid grid-cols-1 gap-1 text-xs">
                 <div><span className="font-semibold text-muted-foreground">SL Ref:</span> {unit.sl_reference_no || '-'}</div>
                 <div><span className="font-semibold text-muted-foreground">FL Unit Name:</span> {unit.fl_unit_name || '-'}</div>
+                <div><span className="font-semibold text-muted-foreground">Type:</span> {unit.unit_type || '-'}</div>
                 <ExpandableDescriptionCard description={unit.unit_description} />
               </div>
               <StageWorkflow unit={enrichedUnit} />
