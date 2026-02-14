@@ -20,12 +20,13 @@ interface ProjectState {
   totalPages: number
   perPage: number
   search: string
+  totalUnits: number
 
   fetchProjects: (page?: number, search?: string) => Promise<void>
   fetchProjectById: (id: string) => Promise<void>
   createProject: (data: CreateProjectPayload) => Promise<void>
 
-  fetchUnits: (projectId: string) => Promise<void>
+  fetchUnits: (projectId: string, page?: number, search?: string) => Promise<void>
   fetchProjectStats: (projectId: string) => Promise<void>
   createUnit: (projectId: string, data: CreateUnitPayload) => Promise<void>
   fetchUnitStages: (unitId: string) => Promise<void>
@@ -115,18 +116,28 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     }
   },
 
-  fetchUnits: async (projectId) => {
+  totalUnits: 0,
+  fetchUnits: async (projectId, page = 1, search = '') => {
     set({ isLoading: true, error: null })
     try {
       const response = await api.get(`/projects/${projectId}/units`, {
         params: {
+          page,
+          search,
           include:
             'statusUpdates,status_updates,statusUpdates.revisions,status_updates.revisions,statusUpdates.approvals,status_updates.approvals,stages.tasks',
         },
       })
-      // Handle potential Laravel resource wrapper
       const data = response.data.data || response.data
-      set({ units: data || [] })
+      const meta = response.data.meta || {}
+      set({
+        units: data || [],
+        page: meta.current_page || meta.currentPage || page,
+        totalPages: meta.last_page || meta.lastPage || 1,
+        perPage: meta.per_page || meta.perPage || 5,
+        totalUnits: meta.total || 0,
+        search,
+      })
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : 'Failed to fetch units'

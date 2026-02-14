@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, use } from 'react'
+import { useEffect, use, useState } from 'react'
 import { useProjectStore } from '@/store/useProjectStore'
 import { UnitsTable } from '@/components/modules/units-table'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
@@ -23,15 +24,19 @@ export default function ProjectUnitsPage({
     isLoading,
     fetchUnits,
     fetchProjectStats,
+    page,
+    totalPages,
+    totalUnits,
   } = useProjectStore()
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     if (projectId) {
       fetchProjectById(projectId)
-      fetchUnits(projectId)
+      fetchUnits(projectId, 1, searchTerm)
       fetchProjectStats(projectId)
     }
-  }, [projectId, fetchProjectById, fetchUnits, fetchProjectStats])
+  }, [projectId, fetchProjectById, fetchUnits, fetchProjectStats, searchTerm])
 
   if (!currentProject) return null
 
@@ -46,7 +51,7 @@ export default function ProjectUnitsPage({
 
   return (
     <div className="flex flex-col gap-4 pb-10">
-      <div className="flex flex-col md:flex-row md:items-center gap-4">
+      <div className="flex flex-col md:flex-row md:items-center gap-4 justify-between">
         <div className="flex items-center gap-4">
           <Link href="/dashboard/engineering-submissions">
             <Button variant="ghost" size="icon">
@@ -62,6 +67,15 @@ export default function ProjectUnitsPage({
             </p>
           </div>
         </div>
+        <div className="relative w-full sm:w-80 ml-auto">
+          <svg className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+          <Input
+            placeholder="Search units..."
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            className="pl-10 w-full"
+          />
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -71,7 +85,7 @@ export default function ProjectUnitsPage({
             <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
               Total Units
             </span>
-            <div className="mt-2 text-2xl font-bold">{units.length}</div>
+            <div className="mt-2 text-2xl font-bold">{totalUnits}</div>
           </CardContent>
         </Card>
 
@@ -162,6 +176,62 @@ export default function ProjectUnitsPage({
             showActions={true}
           />
         )}
+
+      {/* Pagination Controls */}
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-8">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchUnits(projectId, page - 1, searchTerm)}
+            disabled={page === 1}
+            className="cursor-pointer h-9 px-3"
+          >
+            <span className="hidden sm:inline">Previous</span>
+          </Button>
+          <div className="flex items-center gap-1">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+              if (
+                p === 1 || 
+                p === totalPages ||
+                (p >= page - 1 && p <= page + 1)
+              ) {
+                return (
+                  <Button
+                    key={p}
+                    variant={p === page ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => fetchUnits(projectId, p, searchTerm)}
+                    className="h-9 w-9 p-0"
+                  >
+                    {p}
+                  </Button>
+                )
+              }
+              if (p === page - 2 || p === page + 2) {
+                return (
+                  <span key={p} className="px-1 text-muted-foreground">
+                    ...
+                  </span>
+                )
+              }
+              return null
+            })}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchUnits(projectId, page + 1, searchTerm)}
+            disabled={page === totalPages}
+            className="cursor-pointer h-9 px-3"
+          >
+            <span className="hidden sm:inline">Next</span>
+          </Button>
+        </div>
+        <div className="text-sm text-muted-foreground font-medium">
+          Page {page} of {totalPages}
+        </div>
+      </div>
       </div>
     </div>
   )

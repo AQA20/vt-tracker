@@ -15,9 +15,12 @@ interface DeliveryOverviewTableProps {
   units: Unit[]
 }
 
+
 import { SquarePen } from 'lucide-react'
+import { useIsMobile } from '@/hooks/use-mobile'
 
 export function DeliveryOverviewTable({ units }: DeliveryOverviewTableProps) {
+  const isMobile = useIsMobile();
   // Define constant milestones descriptions
   const MILESTONES = [
     { code: '1c', description: 'Receive approved drawings' },
@@ -100,7 +103,10 @@ export function DeliveryOverviewTable({ units }: DeliveryOverviewTableProps) {
           {/* Row 1: FL Elevator name/number */}
           <TableRow className="bg-muted/50 hover:bg-muted/50">
             <TableHead
-              className="min-w-[300px] w-[300px] sticky left-0 z-50 bg-muted border-r border-b font-bold text-foreground border-border"
+              className={
+                `sticky left-0 z-50 bg-muted border-r border-b font-bold text-foreground border-border ` +
+                (isMobile ? 'min-w-[80px] w-[80px]' : 'min-w-[300px] w-[300px]')
+              }
               colSpan={2}
             >
               FL Elevator name/number
@@ -108,7 +114,10 @@ export function DeliveryOverviewTable({ units }: DeliveryOverviewTableProps) {
             {units.map((unit) => (
               <TableHead
                 key={`unit-${unit.id}-fl-name`}
-                className="text-center border-r border-b border-border min-w-[200px] font-medium text-muted-foreground bg-background"
+                className={
+                  `text-center border-r border-b border-border font-medium text-muted-foreground bg-background ` +
+                  (isMobile ? 'min-w-[60px] w-[60px]' : 'min-w-[200px]')
+                }
                 colSpan={2}
               >
                 {unit.fl_unit_name || '-'}
@@ -116,18 +125,21 @@ export function DeliveryOverviewTable({ units }: DeliveryOverviewTableProps) {
             ))}
           </TableRow>
 
-          {/* Row 2: KONE equipment no. */}
+          {/* Row 2: KONE equipment no. (mobile: Eq. No.) */}
           <TableRow className="bg-muted/50 hover:bg-muted/50">
             <TableHead
               className="sticky left-0 z-50 bg-muted border-r border-b font-bold text-foreground border-border"
               colSpan={2}
             >
-              KONE equipment no.
+              {isMobile ? 'Eq. No.' : 'KONE equipment no.'}
             </TableHead>
             {units.map((unit) => (
               <TableHead
                 key={`unit-${unit.id}-equip-no`}
-                className="text-center border-r border-b border-border min-w-[200px] bg-background"
+                className={
+                  `text-center border-r border-b border-border bg-background ` +
+                  (isMobile ? 'min-w-[60px] w-[60px]' : 'min-w-[200px]')
+                }
                 colSpan={2}
               >
                 <div className="flex items-center justify-center gap-2 py-2">
@@ -145,18 +157,21 @@ export function DeliveryOverviewTable({ units }: DeliveryOverviewTableProps) {
             ))}
           </TableRow>
 
-          {/* Row 3: SL Reference no. */}
+          {/* Row 3: SL Reference no. (mobile: Ref. No.) */}
           <TableRow className="bg-muted/50 hover:bg-muted/50">
             <TableHead
               className="sticky left-0 z-50 bg-muted border-r border-b font-bold text-foreground border-border"
               colSpan={2}
             >
-              SL Reference no.
+              {isMobile ? 'Ref. No.' : 'SL Reference no.'}
             </TableHead>
             {units.map((unit) => (
               <TableHead
                 key={`unit-${unit.id}-sl-ref`}
-                className="text-center border-r border-b border-border min-w-[200px] font-medium text-muted-foreground bg-background"
+                className={
+                  `text-center border-r border-b border-border font-medium text-muted-foreground bg-background ` +
+                  (isMobile ? 'min-w-[60px] w-[60px]' : 'min-w-[200px]')
+                }
                 colSpan={2}
               >
                 {unit.sl_reference_no || '-'}
@@ -211,9 +226,12 @@ export function DeliveryOverviewTable({ units }: DeliveryOverviewTableProps) {
                     </TableCell>
                   )}
 
-                  {/* Milestone description */}
-                  <TableCell className="font-semibold border-r border-b border-border text-xs min-w-[250px] whitespace-normal sticky left-[50px] z-30 bg-blue-100 dark:bg-blue-900/50 text-blue-900 dark:text-blue-200">
-                    {milestone.code} ({milestone.description})
+                  {/* Milestone description (mobile: code only) */}
+                  <TableCell className={
+                    `font-semibold border-r border-b border-border text-xs whitespace-normal sticky left-[50px] z-30 bg-blue-100 dark:bg-blue-900/50 text-blue-900 dark:text-blue-200 ` +
+                    (isMobile ? 'min-w-[40px] w-[40px]' : 'min-w-[250px]')
+                  }>
+                    {isMobile ? milestone.code : `${milestone.code} (${milestone.description})`}
                   </TableCell>
 
                   {/* Data cells for each unit */}
@@ -226,11 +244,17 @@ export function DeliveryOverviewTable({ units }: DeliveryOverviewTableProps) {
 
                     return (
                       <>
-                        <TableCell className="text-center border-r border-b border-border text-[11px] bg-background py-2">
+                        <TableCell className={
+                          `text-center border-r border-b border-border text-[11px] bg-background py-2 ` +
+                          (isMobile ? 'min-w-[40px] w-[40px]' : 'min-w-[100px]')
+                        }>
                           {formatDate(mData?.planned_completion_date || null)}
                         </TableCell>
                         <TableCell
-                          className={`text-center border-r border-b border-border text-[11px] py-2 ${actualStyle}`}
+                          className={
+                            `text-center border-r border-b border-border text-[11px] py-2 ${actualStyle} ` +
+                            (isMobile ? 'min-w-[40px] w-[40px]' : 'min-w-[100px]')
+                          }
                         >
                           {formatDate(mData?.actual_completion_date || null)}
                         </TableCell>

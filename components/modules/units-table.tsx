@@ -1,4 +1,67 @@
-'use client'
+"use client"
+
+import { Badge } from '@/components/ui/badge'
+// ...existing code...
+// ...existing code...
+// ...existing code...
+// ...existing code...
+// ...existing code...
+// ...existing code...
+// ...existing code...
+// ...existing code...
+// ...existing code...
+// ...existing code...
+// ...existing code...
+// ...existing code...
+
+// Expandable/collapsible cell for long unit descriptions (desktop table)
+function ExpandableDescriptionCell({ description }: { description?: string | null }) {
+  const [expanded, setExpanded] = useState(false);
+  if (!description) return <TableCell>-</TableCell>;
+  const isLong = description.length > 60;
+  return (
+    <TableCell className="max-w-55">
+      <span>
+        {expanded || !isLong ? description : description.slice(0, 60) + '...'}
+      </span>
+      {isLong && (
+        <Button
+          variant="link"
+          size="sm"
+          className="ml-2 px-1 text-xs h-auto min-h-0"
+          onClick={e => { e.stopPropagation(); setExpanded(v => !v); }}
+        >
+          {expanded ? 'Show less' : 'Show more'}
+        </Button>
+      )}
+    </TableCell>
+  );
+}
+
+// Expandable/collapsible for mobile card
+function ExpandableDescriptionCard({ description }: { description?: string | null }) {
+  const [expanded, setExpanded] = useState(false);
+  if (!description) return <div><span className="font-semibold text-muted-foreground">Description:</span> -</div>;
+  const isLong = description.length > 60;
+  return (
+    <div>
+      <span className="font-semibold text-muted-foreground">Description:</span>{' '}
+      <span>
+        {expanded || !isLong ? description : description.slice(0, 60) + '...'}
+      </span>
+      {isLong && (
+        <Button
+          variant="link"
+          size="sm"
+          className="ml-2 px-1 text-xs h-auto min-h-0"
+          onClick={e => { e.stopPropagation(); setExpanded(v => !v); }}
+        >
+          {expanded ? 'Show less' : 'Show more'}
+        </Button>
+      )}
+    </div>
+  );
+}
 
 import { Unit, Stage, StatusUpdate } from '@/types'
 import {
@@ -9,7 +72,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { Badge } from '@/components/ui/badge'
+// ...existing code...
 import { Progress } from '@/components/ui/progress'
 import {
   CheckCircle2,
@@ -78,16 +141,19 @@ export function UnitsTable({
           <TableHeader>
             <TableRow>
               {view === 'standard' && (
-                <TableHead className="w-[50px]"></TableHead>
+                <TableHead className="w-12.5"></TableHead>
               )}
               <TableHead>Equipment Number</TableHead>
+              <TableHead>SL Reference No.</TableHead>
+              <TableHead>FL Unit Name</TableHead>
+              <TableHead>Unit Description</TableHead>
               {view === 'standard' ? (
                 <>
                   <TableHead>Type</TableHead>
                   <TableHead>Category</TableHead>
-                  <TableHead className="w-[180px]">Installation</TableHead>
-                  <TableHead className="w-[180px]">Commissioning</TableHead>
-                  <TableHead className="w-[180px]">Average Progress</TableHead>
+                  <TableHead className="w-45">Installation</TableHead>
+                  <TableHead className="w-45">Commissioning</TableHead>
+                  <TableHead className="w-45">Average Progress</TableHead>
                   <TableHead className="text-right">Stage</TableHead>
                 </>
               ) : (
@@ -101,21 +167,21 @@ export function UnitsTable({
                 </>
               )}
               {showActions && (
-                <TableHead className="text-right w-[100px]">Actions</TableHead>
+                <TableHead className="text-right w-25">Actions</TableHead>
               )}
             </TableRow>
           </TableHeader>
-          <TableBody>
-            {units.map((unit) => (
-              <UnitRow
-                key={unit.id}
-                unit={unit}
-                projectId={projectId}
-                view={view}
-                showActions={showActions}
-              />
-            ))}
-          </TableBody>
+            <TableBody>
+              {units.map((unit) => (
+                <UnitRow
+                  key={unit.id}
+                  unit={unit}
+                  projectId={projectId}
+                  view={view}
+                  showActions={showActions}
+                />
+              ))}
+            </TableBody>
         </Table>
       </div>
     </div>
@@ -144,6 +210,73 @@ function UnitCard({
     setIsOpen(!isOpen)
   }
 
+
+  // Show unit data and technical statuses on mobile for technical view
+  if (view === 'technical') {
+    return (
+      <div className={cn('rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden')}>
+        <div className="p-4">
+          <div className="mb-2">
+            <span className="block font-bold text-sm">{unit.equipment_number}</span>
+            <div className="text-xs text-muted-foreground">
+              <span className="font-semibold">SL Reference No.:</span> {unit.sl_reference_no || '-'}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              <span className="font-semibold">FL Unit Name:</span> {unit.fl_unit_name || '-'}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              <span className="font-semibold">Unit Description:</span> {unit.unit_description || '-'}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 border-t pt-4">
+            {[
+              'tech',
+              'sample',
+              'layout',
+              'car_m_dwg',
+              'cop_dwg',
+              'landing_dwg',
+            ].map((key) => {
+              const update = getTechnicalUpdate(unit, key)
+              const status = update?.status
+              return (
+                <div key={key} className="flex flex-col gap-1">
+                  <span className="text-[9px] uppercase font-bold text-muted-foreground">
+                    {getCategoryLabel(key)}
+                  </span>
+                  <Badge
+                    variant={getStatusBadgeVariant(status)}
+                    className="w-fit text-[10px] px-1.5 h-5"
+                  >
+                    {getStatusLabel(status)}
+                  </Badge>
+                  {renderTechnicalDetails(update)}
+                </div>
+              )
+            })}
+          </div>
+          {showActions && (
+            <div className="flex items-center gap-1 mt-2">
+              <Link
+                href={`/dashboard/engineering-submissions/${projectId}/units/${unit.id}/edit`}
+              >
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 cursor-pointer"
+                >
+                  <SquarePen className="h-4 w-4" />
+                </Button>
+              </Link>
+              <DeleteUnitButton unitId={unit.id} onDeleted={() => {}} />
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  // ...existing code for standard view...
   return (
     <div
       className={cn(
@@ -161,12 +294,11 @@ function UnitCard({
             <Badge variant="outline" className="text-[10px] px-1.5 h-4">
               {unit.category}
             </Badge>
-            {view === 'standard' &&
-              (isOpen ? (
-                <ChevronDown className="h-4 w-4 text-muted-foreground" />
-              ) : (
-                <ChevronRight className="h-4 w-4 text-muted-foreground" />
-              ))}
+            {isOpen ? (
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            )}
           </div>
           {showActions && (
             <div className="flex items-center gap-1">
@@ -229,41 +361,12 @@ function UnitCard({
             </div>
           </div>
         </div>
-        {view === 'technical' && (
-          <div className="mt-4 grid grid-cols-2 gap-2 border-t pt-4">
-            {[
-              'tech',
-              'sample',
-              'layout',
-              'car_m_dwg',
-              'cop_dwg',
-              'landing_dwg',
-            ].map((key) => {
-              const update = getTechnicalUpdate(unit, key)
-              const status = update?.status
-              return (
-                <div key={key} className="flex flex-col gap-1">
-                  <span className="text-[9px] uppercase font-bold text-muted-foreground">
-                    {getCategoryLabel(key)}
-                  </span>
-                  <Badge
-                    variant={getStatusBadgeVariant(status)}
-                    className="w-fit text-[10px] px-1.5 h-5"
-                  >
-                    {getStatusLabel(status)}
-                  </Badge>
-                  {renderTechnicalDetails(update)}
-                </div>
-              )
-            })}
+        {isOpen && (
+          <div className="border-t bg-zinc-50/50 dark:bg-zinc-900/50 p-4">
+            <StageWorkflow unit={unit} />
           </div>
         )}
       </div>
-      {view === 'standard' && isOpen && (
-        <div className="border-t bg-zinc-50/50 dark:bg-zinc-900/50 p-4">
-          <StageWorkflow unit={unit} />
-        </div>
-      )}
     </div>
   )
 }
@@ -314,9 +417,12 @@ function UnitRow({
           </TableCell>
         )}
         <TableCell className="font-medium">{unit.equipment_number}</TableCell>
+        <TableCell>{unit.sl_reference_no || '-'}</TableCell>
+        <TableCell>{unit.fl_unit_name || '-'}</TableCell>
+        <ExpandableDescriptionCell description={unit.unit_description} />
         {view === 'standard' ? (
           <>
-            <TableCell className="max-w-[150px] truncate">
+            <TableCell className="max-w-37.5 truncate">
               {unit.unit_type}
             </TableCell>
             <TableCell>
@@ -414,6 +520,11 @@ function UnitRow({
         <TableRow className="bg-zinc-50/50 dark:bg-zinc-900/50 hover:bg-zinc-50/50">
           <TableCell colSpan={8} className="p-0">
             <div className="p-4">
+              <div className="mb-2 grid grid-cols-1 gap-1 text-xs">
+                <div><span className="font-semibold text-muted-foreground">SL Ref:</span> {unit.sl_reference_no || '-'}</div>
+                <div><span className="font-semibold text-muted-foreground">FL Unit Name:</span> {unit.fl_unit_name || '-'}</div>
+                <ExpandableDescriptionCard description={unit.unit_description} />
+              </div>
               <StageWorkflow unit={unit} />
             </div>
           </TableCell>

@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState, use } from 'react';
+import { Input } from '@/components/ui/input';
+import { Search } from 'lucide-react';
 import { useProjectStore } from '@/store/useProjectStore';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -15,16 +17,17 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ projec
   // Unwrap params using React.use()
   const { projectId: id } = use(params);
   
-  const { currentProject, fetchProjectById, fetchUnits, units, isLoading } = useProjectStore();
+  const { currentProject, fetchProjectById, fetchUnits, units, isLoading, page, totalPages, totalUnits } = useProjectStore();
   const [isAddUnitOpen, setIsAddUnitOpen] = useState(false);
   const [isBulkImportOpen, setIsBulkImportOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     if (id) {
       fetchProjectById(id);
-      fetchUnits(id);
+      fetchUnits(id, 1, searchTerm);
     }
-  }, [id, fetchProjectById, fetchUnits]);
+  }, [id, fetchProjectById, fetchUnits, searchTerm]);
 
   if (isLoading && !currentProject) {
     return (
@@ -39,34 +42,45 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ projec
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col md:flex-row md:items-center gap-4">
-          <div className="flex items-center gap-4">
-              <Link href="/dashboard">
-                <Button variant="ghost" size="icon">
-                    <ArrowLeft className="h-4 w-4" />
-                </Button>
-              </Link>
-              <div>
-                <h1 className="text-xl md:text-2xl font-bold tracking-tight">{currentProject.name}</h1>
-                <p className="text-xs md:text-sm text-muted-foreground">{currentProject.location} • {currentProject.client_name}</p>
-              </div>
+      <div className="flex flex-col md:flex-row md:items-center gap-4 justify-between">
+        <div className="flex items-center gap-4">
+          <Link href="/dashboard">
+            <Button variant="ghost" size="icon">
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+          </Link>
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight">{currentProject.name}</h1>
+            <p className="text-xs md:text-sm text-muted-foreground">{currentProject.location} • {currentProject.client_name}</p>
           </div>
-          <div className="md:ml-auto flex flex-col sm:flex-row gap-2">
+        </div>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 w-full sm:w-auto justify-end">
+          <div className="relative w-full sm:w-80 mb-2 sm:mb-0 sm:mr-4">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+            <Input
+              placeholder="Search units..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-2 w-full sm:w-auto justify-end">
             <Button className='cursor-pointer w-full sm:w-auto' variant="outline" onClick={() => setIsBulkImportOpen(true)}>
-                <Download className="mr-2 h-4 w-4" />
-                Import CSV
+              <Download className="mr-2 h-4 w-4" />
+              Import CSV
             </Button>
             <Button onClick={() => setIsAddUnitOpen(true)} className="cursor-pointer w-full sm:w-auto">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Unit
+              <Plus className="mr-2 h-4 w-4" />
+              Add Unit
             </Button>
           </div>
+        </div>
       </div>
 
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <div className="rounded-xl border bg-card text-card-foreground shadow p-4 md:p-6">
               <div className="text-sm font-medium text-muted-foreground">Total Units</div>
-              <div className="text-2xl font-bold">{units.length}</div>
+              <div className="text-2xl font-bold">{totalUnits}</div>
           </div>
           <div className="rounded-xl border bg-card text-card-foreground shadow p-4 md:p-6">
               <div className="text-sm font-medium text-muted-foreground">Installation</div>
@@ -86,6 +100,62 @@ export default function ProjectDetailPage({ params }: { params: Promise<{ projec
       </div>
 
       <UnitsTable units={units} projectId={id} />
+
+      {/* Pagination Controls */}
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-8">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchUnits(id, page - 1)}
+            disabled={page === 1}
+            className="cursor-pointer h-9 px-3"
+          >
+            <span className="hidden sm:inline">Previous</span>
+          </Button>
+          <div className="flex items-center gap-1">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
+              if (
+                p === 1 || 
+                p === totalPages ||
+                (p >= page - 1 && p <= page + 1)
+              ) {
+                return (
+                  <Button
+                    key={p}
+                    variant={p === page ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => fetchUnits(id, p)}
+                    className="h-9 w-9 p-0"
+                  >
+                    {p}
+                  </Button>
+                )
+              }
+              if (p === page - 2 || p === page + 2) {
+                return (
+                  <span key={p} className="px-1 text-muted-foreground">
+                    ...
+                  </span>
+                )
+              }
+              return null
+            })}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => fetchUnits(id, page + 1)}
+            disabled={page === totalPages}
+            className="cursor-pointer h-9 px-3"
+          >
+            <span className="hidden sm:inline">Next</span>
+          </Button>
+        </div>
+        <div className="text-sm text-muted-foreground font-medium">
+          Page {page} of {totalPages}
+        </div>
+      </div>
 
       <AddUnitModal 
         isOpen={isAddUnitOpen} 
