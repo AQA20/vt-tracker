@@ -1,19 +1,21 @@
 FROM node:20-alpine AS base
-RUN corepack enable && corepack prepare pnpm@latest --activate
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
 
 # 1. Install dependencies only when needed
 FROM base AS deps
-RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 COPY package.json pnpm-lock.yaml ./ 
+RUN corepack enable && corepack install -g pnpm@latest
 RUN pnpm install --frozen-lockfile
 
 # 2. Rebuild the source code only when needed
 FROM base AS builder
-RUN corepack enable && corepack prepare pnpm@latest --activate
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
+RUN corepack enable && corepack install -g pnpm@latest
 RUN pnpm build
 
 # 3. Production image, copy all the files and run next
