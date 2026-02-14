@@ -1,1 +1,3 @@
-equipment_number,unit_type,category
+
+equipment_number,sl_reference_no,fl_unit_name,unit_description,unit_type,category
+12345,REF001,Unit A,Sample description,KONE MonoSpace 700,elevator
