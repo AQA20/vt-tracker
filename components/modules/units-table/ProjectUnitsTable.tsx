@@ -26,7 +26,7 @@ interface ProjectUnitsTableProps {
   isLoading?: boolean
 }
 
-export function ProjectUnitsTable({ units, projectId, isLoading = false }: ProjectUnitsTableProps) {
+export function ProjectUnitsTable({ units, isLoading = false }: ProjectUnitsTableProps) {
   if (isLoading) {
     return <ProjectUnitsTableSkeleton />
   }
@@ -35,25 +35,25 @@ export function ProjectUnitsTable({ units, projectId, isLoading = false }: Proje
 
   return (
     <div className="space-y-4">
-      {/* Mobile Card View */}
-      <div className="grid gap-4 md:hidden">
+      {/* Card View – mobile & tablet */}
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:hidden">
         {units.map((unit) => (
           <ProjectUnitCard key={unit.id} unit={unit} />
         ))}
       </div>
 
-      {/* Desktop Table View */}
-      <div className="hidden md:block rounded-md border">
+      {/* Table View – desktop */}
+      <div className="hidden lg:block rounded-md border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-12.5"></TableHead>
+              <TableHead className="w-10"></TableHead>
               <TableHead>Equipment Number</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Category</TableHead>
-              <TableHead className="w-45">Installation</TableHead>
-              <TableHead className="w-45">Commissioning</TableHead>
-              <TableHead className="w-45">Average Progress</TableHead>
+              <TableHead className="w-40 xl:w-45">Installation</TableHead>
+              <TableHead className="w-40 xl:w-45">Commissioning</TableHead>
+              <TableHead className="w-40 xl:w-45">Average Progress</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -68,7 +68,7 @@ export function ProjectUnitsTable({ units, projectId, isLoading = false }: Proje
 }
 
 /* ------------------------------------------------------------------ */
-/*  ProjectUnitCard – mobile card                                     */
+/*  ProjectUnitCard – mobile card (expandable)                        */
 /* ------------------------------------------------------------------ */
 
 function ProjectUnitCard({ unit }: { unit: Unit }) {
@@ -80,52 +80,6 @@ function ProjectUnitCard({ unit }: { unit: Unit }) {
     [unit, stages],
   )
 
-  const toggleOpen = () => {
-    setIsOpen(!isOpen)
-  }
-
-  if (typeof window !== 'undefined' && window.innerWidth < 768) {
-    return (
-      <div className={cn('rounded-lg border bg-card text-card-foreground shadow-sm overflow-hidden')}>
-        <div className="p-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="block font-bold text-sm">{unit.equipment_number}</span>
-            <Badge variant="outline" className="text-[10px] px-1.5 h-4">{unit.category}</Badge>
-          </div>
-          <div className="mb-2 text-xs text-muted-foreground">
-            <div><span className="font-semibold">SL Ref:</span> {unit.sl_reference_no || '-'}</div>
-            <div><span className="font-semibold">FL Unit Name:</span> {unit.fl_unit_name || '-'}</div>
-            <ExpandableDescriptionCard description={unit.unit_description} />
-          </div>
-          <div className="grid grid-cols-3 gap-3 mb-2">
-            <div className="space-y-1">
-              <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">Installation</span>
-              <div className="flex items-center gap-2">
-                <Progress value={Number(unit.installation_progress || 0)} className="h-1.5" />
-                <span className="text-[10px] font-medium w-7 text-right">{Number(unit.installation_progress || 0).toFixed(0)}%</span>
-              </div>
-            </div>
-            <div className="space-y-1">
-              <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">Commissioning</span>
-              <div className="flex items-center gap-2">
-                <Progress value={Number(unit.commissioning_progress || 0)} className="h-1.5" />
-                <span className="text-[10px] font-medium w-7 text-right">{Number(unit.commissioning_progress || 0).toFixed(0)}%</span>
-              </div>
-            </div>
-            <div className="space-y-1">
-              <span className="text-[10px] text-primary uppercase font-bold tracking-tight">Average</span>
-              <div className="flex items-center gap-2">
-                <Progress value={Number(unit.progress_percent || 0)} className="h-1.5" />
-                <span className="text-[10px] font-bold text-primary w-7 text-right">{Number(unit.progress_percent || 0).toFixed(0)}%</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  // SSR / fallback
   return (
     <div
       className={cn(
@@ -133,22 +87,22 @@ function ProjectUnitCard({ unit }: { unit: Unit }) {
         isOpen && 'ring-1 ring-primary/20',
       )}
     >
-      <div className="p-4">
+      <div
+        className="p-4 cursor-pointer"
+        onClick={() => setIsOpen(!isOpen)}
+      >
         <div className="flex items-center justify-between mb-3">
-          <div
-            className="flex items-center gap-2 cursor-pointer"
-            onClick={toggleOpen}
-          >
+          <div className="flex items-center gap-2">
             <span className="font-bold text-sm">{unit.equipment_number}</span>
             <Badge variant="outline" className="text-[10px] px-1.5 h-4">
               {unit.category}
             </Badge>
-            {isOpen ? (
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
-            ) : (
-              <ChevronRight className="h-4 w-4 text-muted-foreground" />
-            )}
           </div>
+          {isOpen ? (
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          )}
         </div>
         <div className="grid grid-cols-3 gap-3">
           <div className="space-y-1">
@@ -194,12 +148,18 @@ function ProjectUnitCard({ unit }: { unit: Unit }) {
             </div>
           </div>
         </div>
-        {isOpen && (
-          <div className="border-t bg-zinc-50/50 dark:bg-zinc-900/50 p-4">
-            <StageWorkflow unit={enrichedUnit} />
-          </div>
-        )}
       </div>
+      {isOpen && (
+        <div className="border-t bg-zinc-50/50 dark:bg-zinc-900/50 p-4 space-y-3">
+          <div className="grid grid-cols-1 gap-1 text-xs">
+            <div><span className="font-semibold text-muted-foreground">SL Ref:</span> {unit.sl_reference_no || '-'}</div>
+            <div><span className="font-semibold text-muted-foreground">FL Unit Name:</span> {unit.fl_unit_name || '-'}</div>
+            <div><span className="font-semibold text-muted-foreground">Type:</span> {unit.unit_type || '-'}</div>
+            <ExpandableDescriptionCard description={unit.unit_description} />
+          </div>
+          <StageWorkflow unit={enrichedUnit} />
+        </div>
+      )}
     </div>
   )
 }

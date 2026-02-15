@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { DeliveryMilestone } from '@/types'
 import {
   Dialog,
@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
-import { updateDeliveryMilestone } from '@/services/deliveryTrackingService'
+import { useUpdateMilestone } from '@/hooks/mutations/useUpdateMilestone'
 
 interface MilestoneDialogProps {
   open: boolean
@@ -27,40 +27,57 @@ export function MilestoneDialog({
   milestone,
   onSuccess,
 }: MilestoneDialogProps) {
-  const [loading, setLoading] = useState(false)
-  const [actualDate, setActualDate] = useState('')
-  const [plannedDate, setPlannedDate] = useState('')
+  if (!milestone) return null
 
-  useEffect(() => {
-    if (milestone) {
-      setActualDate(milestone.actual_completion_date || '')
-      setPlannedDate(milestone.planned_completion_date || '')
-    }
-  }, [milestone])
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      {/* key forces React to remount the form when the milestone changes */}
+      <MilestoneForm
+        key={milestone.id}
+        milestone={milestone}
+        onSuccess={onSuccess}
+        onOpenChange={onOpenChange}
+      />
+    </Dialog>
+  )
+}
+
+function MilestoneForm({
+  milestone,
+  onSuccess,
+  onOpenChange,
+}: {
+  milestone: DeliveryMilestone
+  onSuccess: () => void
+  onOpenChange: (open: boolean) => void
+}) {
+  const updateMilestone = useUpdateMilestone()
+  const [actualDate, setActualDate] = useState(
+    milestone.actual_completion_date || '',
+  )
+  const [plannedDate, setPlannedDate] = useState(
+    milestone.planned_completion_date || '',
+  )
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!milestone) return
 
-    setLoading(true)
     try {
-      await updateDeliveryMilestone(milestone.id, {
-        actual_completion_date: actualDate || null,
-        planned_completion_date: plannedDate || null,
+      await updateMilestone.mutateAsync({
+        milestoneId: milestone.id,
+        payload: {
+          actual_completion_date: actualDate || null,
+          planned_completion_date: plannedDate || null,
+        },
       })
       onSuccess()
       onOpenChange(false)
     } catch (error) {
       console.error('Failed to update milestone', error)
-    } finally {
-      setLoading(false)
     }
   }
 
-  if (!milestone) return null
-
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Edit Milestone: {milestone.milestone_code}</DialogTitle>
@@ -106,12 +123,11 @@ export function MilestoneDialog({
           </div>
 
           <DialogFooter>
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Saving...' : 'Save changes'}
+            <Button type="submit" disabled={updateMilestone.isPending}>
+              {updateMilestone.isPending ? 'Saving...' : 'Save changes'}
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
-    </Dialog>
   )
 }

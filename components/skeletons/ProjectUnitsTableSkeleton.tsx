@@ -13,7 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton'
 export function ProjectUnitsTableSkeleton() {
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 md:hidden">
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:hidden">
         {Array.from({ length: 3 }).map((_, index) => (
           <div
             key={`unit-card-skeleton-${index}`}
@@ -42,7 +42,7 @@ export function ProjectUnitsTableSkeleton() {
         ))}
       </div>
 
-      <div className="hidden md:block rounded-md border">
+      <div className="hidden lg:block rounded-md border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>

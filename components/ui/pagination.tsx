@@ -19,8 +19,8 @@ export function Pagination({ page, totalPages, onPageChange }: PaginationProps) 
           disabled={page === 1}
           className="cursor-pointer h-9 px-3"
         >
-          <span className="sm:hidden"><ChevronLeft className="h-4 w-4" /></span>
-          <span className="hidden sm:inline">Previous</span>
+          <span className="sm:hidden cursor-pointer"><ChevronLeft className="h-4 w-4" /></span>
+          <span className="hidden sm:inline cursor-pointer">Previous</span>
         </Button>
         <div className="flex items-center gap-1">
           {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
@@ -35,7 +35,7 @@ export function Pagination({ page, totalPages, onPageChange }: PaginationProps) 
                   variant={p === page ? 'default' : 'outline'}
                   size="sm"
                   onClick={() => onPageChange(p)}
-                  className="h-9 w-9 p-0"
+                  className="h-9 w-9 p-0 cursor-pointer"
                 >
                   {p}
                 </Button>
@@ -58,8 +58,8 @@ export function Pagination({ page, totalPages, onPageChange }: PaginationProps) 
           disabled={page === totalPages}
           className="cursor-pointer h-9 px-3"
         >
-          <span className="sm:hidden"><ChevronRight className="h-4 w-4" /></span>
-          <span className="hidden sm:inline">Next</span>
+          <span className="sm:hidden cursor-pointer"><ChevronRight className="h-4 w-4" /></span>
+          <span className="hidden sm:inline cursor-pointer">Next</span>
         </Button>
       </div>
       <div className="text-sm text-muted-foreground font-medium">

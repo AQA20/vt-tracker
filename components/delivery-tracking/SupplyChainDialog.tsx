@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import { updateSupplyChainReference } from '@/services/deliveryTrackingService'
+import { useUpdateSupplyChainReference } from '@/hooks/mutations/useUpdateSupplyChainReference'
 import { toast } from 'sonner'
 import { SupplyChainReference } from '@/types'
 
@@ -48,7 +48,7 @@ export function SupplyChainDialog({
   initialData,
   onSuccess,
 }: SupplyChainDialogProps) {
-  const [loading, setLoading] = useState(false)
+  const updateSupplyChain = useUpdateSupplyChainReference()
 
   const form = useForm<z.infer<typeof formSchema>>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -80,16 +80,16 @@ export function SupplyChainDialog({
   }, [initialData, form])
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    setLoading(true)
     try {
-      await updateSupplyChainReference(deliveryGroupId, values)
+      await updateSupplyChain.mutateAsync({
+        deliveryGroupId,
+        payload: values,
+      })
       toast.success('References updated successfully')
       onOpenChange(false)
       onSuccess()
     } catch (error) {
       console.error('Failed to update references', error)
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -163,8 +163,8 @@ export function SupplyChainDialog({
             </div>
 
             <DialogFooter>
-              <Button type="submit" disabled={loading}>
-                {loading ? 'Saving...' : 'Save Changes'}
+              <Button type="submit" disabled={updateSupplyChain.isPending}>
+                {updateSupplyChain.isPending ? 'Saving...' : 'Save Changes'}
               </Button>
             </DialogFooter>
           </form>

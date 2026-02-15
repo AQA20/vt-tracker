@@ -48,8 +48,8 @@ export function TechnicalUnitsTable({
 
   return (
     <div className="space-y-4">
-      {/* Mobile Card View */}
-      <div className="grid gap-4 md:hidden">
+      {/* Card View – mobile & tablet */}
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:hidden">
         {units.map((unit) => (
           <TechnicalUnitCard
             key={unit.id}
@@ -60,8 +60,8 @@ export function TechnicalUnitsTable({
         ))}
       </div>
 
-      {/* Desktop Table View */}
-      <div className="hidden md:block rounded-md border">
+      {/* Table View – desktop */}
+      <div className="hidden lg:block rounded-md border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>

@@ -1,9 +1,6 @@
 'use client'
 
-import { use, useState } from 'react'
-import { useProjectQuery } from '@/hooks/queries/useProjectQuery'
-import { useUnitsQuery } from '@/hooks/queries/useUnitsQuery'
-import { useQueryClient } from '@tanstack/react-query'
+import { use } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   ArrowLeft,
@@ -27,18 +24,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { STATUS_STATES } from '@/components/modules/engineering-submissions/constants'
 import { StatusUpdate, StatusApproval, StatusRevision } from '@/types'
-import {
-  updateStatusUpdate,
-  uploadStatusUpdatePdf,
-  updateStatusApproval,
-  createStatusApproval,
-  createStatusRevision,
-  updateStatusRevision,
-  bulkCopyUnitStatus,
-} from '@/services/engineeringSubmissionService'
 import { CopyStatusModal } from '@/components/modules/engineering-submissions/copy-status-modal'
-import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
+import { useEditUnitStatus } from '@/hooks/useEditUnitStatus'
 
 export default function EditUnitStatusPage({
   params,
@@ -46,27 +34,28 @@ export default function EditUnitStatusPage({
   params: Promise<{ projectId: string; unitId: string }>
 }) {
   const { projectId, unitId } = use(params)
-  const { data: currentProject } = useProjectQuery(projectId)
-  const { data: unitsData, isLoading } = useUnitsQuery(projectId, { page: 1, search: '', perPage: 100 })
-  const queryClient = useQueryClient()
-  const [updatingId, setUpdatingId] = useState<string | null>(null)
 
-  // Local state for fetching/loading
-  const [isInternalLoading, setIsInternalLoading] = useState(false)
-
-  // Copy Status Modal State
-  const [copyModalOpen, setCopyModalOpen] = useState(false)
-  const [targetCopyCategory, setTargetCopyCategory] = useState<{
-    key: string
-    label: string
-  } | null>(null)
-
-  const units = unitsData?.data ?? []
-  const unit = units.find((u) => u.id === unitId)
-
-  const refreshUnits = () => {
-    queryClient.invalidateQueries({ queryKey: ['projects', projectId, 'units'] })
-  }
+  const {
+    currentProject,
+    unit,
+    units,
+    isLoading,
+    isCopyLoading,
+    updatingId,
+    copyModalOpen,
+    targetCopyCategory,
+    handleStatusChange,
+    handleFileUpload,
+    handleApprovalDateChange,
+    handleCreateApproval,
+    handleCreateRevision,
+    handleRevisionDateChange,
+    handleCopyStatus,
+    openCopyModal,
+    closeCopyModal,
+    getCategoryLabel,
+    formatDate,
+  } = useEditUnitStatus(projectId, unitId)
 
   if (!unit || (!currentProject && isLoading)) {
     return (
@@ -78,175 +67,6 @@ export default function EditUnitStatusPage({
         )}
       </div>
     )
-  }
-
-  const handleStatusChange = async (
-    statusUpdateId: string,
-    newStatus: string,
-  ) => {
-    setUpdatingId(statusUpdateId)
-    try {
-      await updateStatusUpdate(statusUpdateId, newStatus)
-      toast.success('Status updated successfully')
-      refreshUnits()
-    } catch (error) {
-      console.error('Failed to update status', error)
-    } finally {
-      setUpdatingId(null)
-    }
-  }
-
-  const handleFileUpload = async (statusUpdateId: string, file: File) => {
-    setUpdatingId(statusUpdateId)
-    try {
-      await uploadStatusUpdatePdf(statusUpdateId, file)
-      toast.success('PDF uploaded successfully')
-      refreshUnits()
-    } catch (error) {
-      console.error('Failed to upload PDF', error)
-    } finally {
-      setUpdatingId(null)
-    }
-  }
-
-  const handleApprovalDateChange = async (
-    approvalId: string,
-    newDate: string,
-  ) => {
-    if (!newDate) return
-    setUpdatingId(`approval-${approvalId}`)
-    try {
-      const formattedDateTime = `${newDate} 12:00:00`
-      await updateStatusApproval(approvalId, formattedDateTime)
-      toast.success('Approval date updated')
-      refreshUnits()
-    } catch (error) {
-      console.error('Failed to update approval date', error)
-    } finally {
-      setUpdatingId(null)
-    }
-  }
-
-  const handleCreateApproval = async (
-    statusUpdateId: string,
-    approvalCode: string,
-  ) => {
-    setUpdatingId(`create-${statusUpdateId}-${approvalCode}`)
-    try {
-      const today = new Date().toISOString().split('T')[0]
-      const approvedAt = `${today} 12:00:00`
-      await createStatusApproval({
-        status_update_id: statusUpdateId,
-        approval_code: approvalCode,
-        approved_at: approvedAt,
-      })
-      toast.success(`Code ${approvalCode} approval added`)
-      refreshUnits()
-    } catch (error) {
-      console.error('Failed to create approval', error)
-    } finally {
-      setUpdatingId(null)
-    }
-  }
-
-  const handleCreateRevision = async (
-    statusUpdateId: string,
-    revisionNumber: number,
-    category: 'submitted' | 'rejected',
-  ) => {
-    setUpdatingId(`rev-create-${statusUpdateId}-${revisionNumber}`)
-    try {
-      const today = new Date().toISOString().split('T')[0]
-      const revisionDate = `${today} 12:00:00`
-      await createStatusRevision({
-        status_update_id: statusUpdateId,
-        revision_date: revisionDate,
-        revision_number: revisionNumber,
-        category,
-      })
-      toast.success(`REV${String(revisionNumber).padStart(2, '0')} added`)
-      refreshUnits()
-    } catch (error) {
-      console.error('Failed to create revision', error)
-    } finally {
-      setUpdatingId(null)
-    }
-  }
-
-  const handleRevisionDateChange = async (
-    revisionId: string,
-    newDate: string,
-  ) => {
-    if (!newDate) return
-    setUpdatingId(`rev-update-${revisionId}`)
-    try {
-      const formattedDate = `${newDate} 12:00:00`
-      await updateStatusRevision(revisionId, formattedDate)
-      toast.success('Revision date updated')
-      refreshUnits()
-    } catch (error) {
-      console.error('Failed to update revision date', error)
-    } finally {
-      setUpdatingId(null)
-    }
-  }
-
-  const handleCopyStatus = async (targetUnitIds: string[]) => {
-    if (!targetCopyCategory) return
-    setIsInternalLoading(true)
-    try {
-      await bulkCopyUnitStatus(unitId, targetCopyCategory.key, {
-        target_unit_ids: targetUnitIds,
-      })
-      toast.success(
-        `Status copied successfully to ${targetUnitIds.length} units`,
-      )
-      await refreshUnits()
-      setCopyModalOpen(false)
-    } catch (error) {
-      console.error('Failed to copy status', error)
-    } finally {
-      setIsInternalLoading(false)
-    }
-  }
-
-  const getCategoryLabel = (key: string) => {
-    const labels: Record<string, string> = {
-      tech: 'Tech Sub',
-      sample: 'Sample',
-      layout: 'Layout',
-      car_m_dwg: 'Car M DWG',
-      cop_dwg: 'COP DWG',
-      landing_dwg: 'Landing DWG',
-    }
-    return labels[key] || key
-  }
-
-  const formatDate = (dateValue: string | number | null | undefined) => {
-    if (!dateValue) return ''
-    try {
-      let date: Date
-      if (typeof dateValue === 'number') {
-        const timestamp = dateValue < 5000000000 ? dateValue * 1000 : dateValue
-        date = new Date(timestamp)
-      } else {
-        const normalized = dateValue.includes(' ')
-          ? dateValue.replace(' ', 'T')
-          : dateValue
-        date = new Date(normalized)
-        if (isNaN(date.getTime())) {
-          const num = Number(dateValue)
-          if (!isNaN(num)) {
-            const timestamp = num < 5000000000 ? num * 1000 : num
-            date = new Date(timestamp)
-          }
-        }
-      }
-      if (isNaN(date.getTime())) return ''
-      return date.toISOString().split('T')[0]
-    } catch {
-      return ''
-    }
   }
 
   return (
@@ -267,7 +87,7 @@ export default function EditUnitStatusPage({
         </div>
       </div>
 
-      {(isLoading || isInternalLoading) && !unit && (
+      {(isLoading || isCopyLoading) && !unit && (
         <div className="flex items-center justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
@@ -351,10 +171,7 @@ export default function EditUnitStatusPage({
                         variant="outline"
                         size="sm"
                         className="h-7 text-[10px] gap-1.5 font-bold uppercase tracking-wider px-2 bg-background hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer"
-                        onClick={() => {
-                          setTargetCopyCategory(cat)
-                          setCopyModalOpen(true)
-                        }}
+                        onClick={() => openCopyModal(cat)}
                       >
                         <Copy className="h-3 w-3" />
                         Copy Status
@@ -690,10 +507,7 @@ export default function EditUnitStatusPage({
 
       <CopyStatusModal
         isOpen={copyModalOpen}
-        onClose={() => {
-          setCopyModalOpen(false)
-          setTargetCopyCategory(null)
-        }}
+        onClose={closeCopyModal}
         onCopy={handleCopyStatus}
         projectId={projectId}
         currentUnitId={unitId}

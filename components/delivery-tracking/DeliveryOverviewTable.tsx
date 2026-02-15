@@ -100,7 +100,7 @@ export function DeliveryOverviewTable({ units }: DeliveryOverviewTableProps) {
     <div className="w-full rounded-md border overflow-x-auto bg-background shadow-sm">
       <Table className="border-collapse table-auto w-full">
         <TableHeader className="sticky top-0 z-40">
-          {/* Row 1: FL Elevator name/number */}
+          {/* Row 1: FL name/number */}
           <TableRow className="bg-muted/50 hover:bg-muted/50">
             <TableHead
               className={
@@ -109,7 +109,7 @@ export function DeliveryOverviewTable({ units }: DeliveryOverviewTableProps) {
               }
               colSpan={2}
             >
-              FL Elevator name/number
+              FL name/number
             </TableHead>
             {units.map((unit) => (
               <TableHead

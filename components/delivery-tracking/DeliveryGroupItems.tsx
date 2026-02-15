@@ -1,16 +1,5 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import {
-  getDeliveryModules,
-  getDeliveryGroupItems,
-  createDeliveryGroupItem,
-  deleteDeliveryGroupItem,
-} from '@/services/deliveryGroupItemService'
-import {
-  DeliveryGroupItem,
-  DeliveryModule,
-} from '@/types'
 import {
   Table,
   TableBody,
@@ -31,7 +20,6 @@ import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Trash2, Plus, Loader2 } from 'lucide-react'
 import { Label } from '@/components/ui/label'
-import { toast } from 'sonner'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -42,6 +30,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { useDeliveryGroupItems } from '@/hooks/useDeliveryGroupItems'
 
 interface DeliveryGroupItemsProps {
   deliveryGroupId: string
@@ -50,86 +39,29 @@ interface DeliveryGroupItemsProps {
 export function DeliveryGroupItems({
   deliveryGroupId,
 }: DeliveryGroupItemsProps) {
-  const [items, setItems] = useState<DeliveryGroupItem[]>([])
-  const [modules, setModules] = useState<DeliveryModule[]>([])
-  const [loading, setLoading] = useState(true)
-  const [adding, setAdding] = useState(false)
-  const [itemToDelete, setItemToDelete] = useState<string | null>(null)
+  const {
+    items,
+    modules,
+    isLoading,
+    isAdding,
+    selectedModuleId,
+    selectedContentId,
+    packageType,
+    remarks,
+    specialAddress,
+    availableContents,
+    handleModuleChange,
+    setSelectedContentId,
+    setPackageType,
+    setRemarks,
+    setSpecialAddress,
+    handleAdd,
+    itemToDelete,
+    setItemToDelete,
+    confirmDelete,
+  } = useDeliveryGroupItems(deliveryGroupId)
 
-  // Form state
-  const [selectedModuleId, setSelectedModuleId] = useState<string>('')
-  const [selectedContentId, setSelectedContentId] = useState<string>('')
-  const [packageType, setPackageType] = useState<string>('Standard Packing')
-  const [remarks, setRemarks] = useState('')
-  const [specialAddress, setSpecialAddress] = useState('')
-
-  const fetchItems = useCallback(async () => {
-    try {
-      const res = await getDeliveryGroupItems(deliveryGroupId)
-      setItems(res.data.data)
-    } catch (e) {
-      console.error('Failed to fetch items', e)
-    }
-  }, [deliveryGroupId])
-
-  const fetchCatalog = useCallback(async () => {
-    try {
-      const res = await getDeliveryModules()
-      setModules(res.data.data)
-    } catch (e) {
-      console.error('Failed to fetch catalog', e)
-    }
-  }, [])
-
-  useEffect(() => {
-    setLoading(true)
-    Promise.all([fetchItems(), fetchCatalog()]).finally(() => setLoading(false))
-  }, [fetchItems, fetchCatalog])
-
-  const handleAdd = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!selectedContentId) {
-      toast.error('Please select module content')
-      return
-    }
-
-    setAdding(true)
-    try {
-      await createDeliveryGroupItem(deliveryGroupId, {
-        delivery_module_content_id: selectedContentId,
-        package_type: packageType,
-        remarks: remarks || null,
-        special_delivery_address: specialAddress || null,
-      })
-      toast.success('Item added successfully')
-      fetchItems()
-      // Reset form
-      setSelectedContentId('')
-      setRemarks('')
-      setSpecialAddress('')
-    } catch (e) {
-      console.error('Failed to add item', e)
-      toast.error('Failed to add item')
-    } finally {
-      setAdding(false)
-    }
-  }
-
-  const handleDelete = async (itemId: string) => {
-    try {
-      await deleteDeliveryGroupItem(deliveryGroupId, itemId)
-      toast.success('Item removed')
-      fetchItems()
-    } catch (e) {
-      console.error('Failed to delete item', e)
-      toast.error('Failed to remove item')
-    }
-  }
-
-  const selectedModule = modules.find((m) => m.id === selectedModuleId)
-  const availableContents = selectedModule?.contents || []
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex justify-center p-8">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
@@ -151,10 +83,7 @@ export function DeliveryGroupItems({
             <Label>Module</Label>
             <Select
               value={selectedModuleId}
-              onValueChange={(val) => {
-                setSelectedModuleId(val)
-                setSelectedContentId('')
-              }}
+              onValueChange={handleModuleChange}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select Module" />
@@ -230,9 +159,9 @@ export function DeliveryGroupItems({
             <Button
               type="submit"
               className="w-full sm:w-auto"
-              disabled={adding || !selectedContentId}
+              disabled={isAdding || !selectedContentId}
             >
-              {adding ? (
+              {isAdding ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Adding...
@@ -314,12 +243,7 @@ export function DeliveryGroupItems({
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
-                if (itemToDelete) {
-                  handleDelete(itemToDelete)
-                  setItemToDelete(null)
-                }
-              }}
+              onClick={confirmDelete}
             >
               Delete
             </AlertDialogAction>

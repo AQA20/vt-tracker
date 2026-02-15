@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils'
 import { Edit, Package, ChevronDown, ChevronUp } from 'lucide-react'
 import { SupplyChainDialog } from './SupplyChainDialog'
 import { DeliveryGroupItems } from './DeliveryGroupItems'
+import { useQueryClient } from '@tanstack/react-query'
 
 interface DeliveryTimelineProps {
   groups: DeliveryGroup[]
@@ -24,6 +25,7 @@ export function DeliveryTimeline({
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>(
     {},
   )
+  const queryClient = useQueryClient()
 
   const toggleGroupItems = (groupId: string) => {
     setExpandedGroups((prev) => ({
@@ -59,8 +61,8 @@ export function DeliveryTimeline({
   }
 
   const handleSupplyChainSuccess = () => {
-    // Refresh the page or refetch data
-    window.location.reload()
+    queryClient.invalidateQueries({ queryKey: ['units'] })
+    queryClient.invalidateQueries({ queryKey: ['delivery'] })
   }
 
   return (

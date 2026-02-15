@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useMemo, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
@@ -28,7 +28,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
-import { createDeliveryGroup } from '@/services/deliveryTrackingService'
+import { useCreateDeliveryGroup } from '@/hooks/mutations/useCreateDeliveryGroup'
 import { toast } from 'sonner'
 import { DeliveryGroup } from '@/types'
 
@@ -51,7 +51,7 @@ export function CreateGroupDialog({
   existingGroups,
   onSuccess,
 }: CreateGroupDialogProps) {
-  const [loading, setLoading] = useState(false)
+  const createGroup = useCreateDeliveryGroup(unitId)
 
   const form = useForm<z.infer<typeof formSchema>>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -97,13 +97,12 @@ export function CreateGroupDialog({
   }, [open, availableOptions, form])
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    setLoading(true)
     try {
       // Extract number from "Delivery Group X"
       const match = values.name.match(/(\d+)$/)
       const group_number = match ? parseInt(match[0]) : 0
 
-      await createDeliveryGroup(unitId, {
+      await createGroup.mutateAsync({
         group_name: values.name,
         group_number: group_number,
       })
@@ -116,8 +115,6 @@ export function CreateGroupDialog({
         'Failed to create delivery group',
         error instanceof Error ? error.message : error,
       )
-    } finally {
-      setLoading(false)
     }
   }
 
@@ -161,8 +158,8 @@ export function CreateGroupDialog({
               )}
             />
             <DialogFooter>
-              <Button type="submit" disabled={loading}>
-                {loading ? 'Creating...' : 'Create Group'}
+              <Button type="submit" disabled={createGroup.isPending}>
+                {createGroup.isPending ? 'Creating...' : 'Create Group'}
               </Button>
             </DialogFooter>
           </form>

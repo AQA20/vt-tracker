@@ -1,37 +1,22 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { useAuthStore } from '@/store/useAuthStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2 } from 'lucide-react';
+import { useLogin } from '@/hooks/useLogin';
 
 export default function LoginPage() {
-  const router = useRouter();
-  const { login } = useAuthStore();
-  
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError('');
-
-    try {
-      await login(email, password);
-      router.push('/dashboard'); // or /
-    } catch {
-      setError('Invalid email or password.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const {
+    email,
+    setEmail,
+    password,
+    setPassword,
+    isLoading,
+    error,
+    handleSubmit,
+  } = useLogin();
 
   return (
     <Card className="border-zinc-200 dark:border-zinc-800 shadow-xl">
@@ -41,7 +26,7 @@ export default function LoginPage() {
           Enter your credentials to access the project dashboard.
         </CardDescription>
       </CardHeader>
-      <form onSubmit={handleLogin}>
+      <form onSubmit={handleSubmit}>
         <CardContent className="grid gap-4">
           {error && (
             <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-md">

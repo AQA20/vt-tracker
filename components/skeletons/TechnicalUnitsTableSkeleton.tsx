@@ -15,7 +15,7 @@ const TECHNICAL_KEYS = ['tech', 'sample', 'layout', 'car_m_dwg', 'cop_dwg', 'lan
 export function TechnicalUnitsTableSkeleton({ showActions = true }: { showActions?: boolean }) {
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 md:hidden">
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:hidden">
         {Array.from({ length: 3 }).map((_, index) => (
           <div
             key={`technical-card-skeleton-${index}`}
@@ -40,7 +40,7 @@ export function TechnicalUnitsTableSkeleton({ showActions = true }: { showAction
         ))}
       </div>
 
-      <div className="hidden md:block rounded-md border">
+      <div className="hidden lg:block rounded-md border overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>

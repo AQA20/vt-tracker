@@ -1,6 +1,5 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -14,9 +13,8 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { AlertCircle, Loader2, CheckCircle2 } from 'lucide-react'
-import { Unit } from '@/types'
-import { getProjectUnits } from '@/services/engineeringSubmissionService'
 import { cn } from '@/lib/utils'
+import { useCopyStatusModal } from '@/hooks/useCopyStatusModal'
 
 interface CopyStatusModalProps {
   isOpen: boolean
@@ -36,62 +34,22 @@ export function CopyStatusModal({
   currentUnitId,
   targetCategoryLabel,
 }: CopyStatusModalProps) {
-  const [units, setUnits] = useState<Unit[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>([])
-  const [isSubmitting, setIsSubmitting] = useState(false)
-
-  const fetchUnits = useCallback(async () => {
-    setIsLoading(true)
-    try {
-      const res = await getProjectUnits(projectId)
-      const unitsData = res.data.data || res.data
-      setUnits(unitsData.filter((u: Unit) => u.id !== currentUnitId))
-    } catch (error) {
-      console.error('Failed to fetch units for copy modal', error)
-    } finally {
-      setIsLoading(false)
-    }
-  }, [projectId, currentUnitId])
-
-  useEffect(() => {
-    if (isOpen && projectId) {
-      fetchUnits()
-      setSelectedUnitIds([]) // Reset selection when opening
-    }
-  }, [isOpen, projectId, fetchUnits])
-
-  const handleToggleUnit = (unitId: string) => {
-    setSelectedUnitIds((prev) =>
-      prev.includes(unitId)
-        ? prev.filter((id) => id !== unitId)
-        : [...prev, unitId],
-    )
-  }
-
-  const handleSelectAll = () => {
-    if (selectedUnitIds.length === units.length) {
-      setSelectedUnitIds([])
-    } else {
-      setSelectedUnitIds(units.map((u) => u.id))
-    }
-  }
-
-  const handleCopy = async () => {
-    if (selectedUnitIds.length === 0) return
-    setIsSubmitting(true)
-    try {
-      await onCopy(selectedUnitIds)
-      onClose()
-    } catch (error) {
-      console.error('Copy failed', error)
-    } finally {
-      setIsSubmitting(false)
-    }
-  }
-
-  const isAllSelected =
-    units.length > 0 && selectedUnitIds.length === units.length
+  const {
+    units,
+    isLoading,
+    selectedUnitIds,
+    isSubmitting,
+    isAllSelected,
+    handleToggleUnit,
+    handleSelectAll,
+    handleCopy,
+  } = useCopyStatusModal({
+    isOpen,
+    projectId,
+    currentUnitId,
+    onCopy,
+    onClose,
+  })
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
