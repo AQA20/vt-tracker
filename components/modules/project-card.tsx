@@ -30,7 +30,7 @@ export function ProjectCard({ project, href, showProgress = false }: ProjectCard
           <div className="grid gap-3">
             <ProjectInfoRow icon={Briefcase} label="Client" value={project.client_name} />
             <ProjectInfoRow icon={MapPin} label="Location" value={project.location || 'No Location specified'} />
-            <ProjectInfoRow icon={Hash} label="Kone Project ID" value={project.kone_project_id || 'N/A'} />
+            <ProjectInfoRow icon={Hash} label="Company Project ID" value={project.kone_project_id || 'N/A'} />
           </div>
 
           <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800/50">

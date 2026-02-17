@@ -18,6 +18,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "VT Tracker",
   description: "VT Tracker - Management System",
+  icons: {
+    icon: "/favicon.ico?v=3",
+  },
 };
 
 import { Toaster } from 'sonner';

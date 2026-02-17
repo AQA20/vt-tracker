@@ -125,13 +125,13 @@ export function DeliveryOverviewTable({ units }: DeliveryOverviewTableProps) {
             ))}
           </TableRow>
 
-          {/* Row 2: KONE equipment no. (mobile: Eq. No.) */}
+          {/* Row 2: Equipment no. (mobile: Eq. No.) */}
           <TableRow className="bg-muted/50 hover:bg-muted/50">
             <TableHead
               className="sticky left-0 z-50 bg-muted border-r border-b font-bold text-foreground border-border"
               colSpan={2}
             >
-              {isMobile ? 'Eq. No.' : 'KONE equipment no.'}
+              {isMobile ? 'Eq. No.' : 'Equipment no.'}
             </TableHead>
             {units.map((unit) => (
               <TableHead

@@ -34,7 +34,7 @@ export function AddUnitModal({
 }: AddUnitModalProps) {
   const createUnit = useCreateUnit(projectId)
   const [formData, setFormData] = useState({
-    unit_type: 'KONE MonoSpace 700',
+    unit_type: 'Company MonoSpace 700',
     equipment_number: '',
     category: 'elevator',
     sl_reference_no: '',
@@ -47,7 +47,7 @@ export function AddUnitModal({
       await createUnit.mutateAsync(formData)
       onClose()
       setFormData({
-        unit_type: 'KONE MonoSpace 700',
+        unit_type: 'Company MonoSpace 700',
         equipment_number: '',
         category: 'elevator',
         sl_reference_no: '',
@@ -88,7 +88,7 @@ export function AddUnitModal({
               onChange={(e) =>
                 setFormData({ ...formData, unit_type: e.target.value })
               }
-              placeholder="KONE MonoSpace 700"
+              placeholder="Company MonoSpace 700"
             />
           </div>
           <div className="grid gap-2">

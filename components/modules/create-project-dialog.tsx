@@ -77,7 +77,7 @@ export function CreateProjectDialog({
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="kone_project_id">Kone Project ID</Label>
+            <Label htmlFor="kone_project_id">Company Project ID</Label>
             <Input
               id="kone_project_id"
               value={project.kone_project_id}
