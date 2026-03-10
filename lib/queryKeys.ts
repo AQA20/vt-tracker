@@ -17,6 +17,7 @@ export const queryKeys = {
     stages: (unitId: string) => ['units', unitId, 'stages'] as const,
     rideComfort: (unitId: string) => ['units', unitId, 'ride-comfort'] as const,
     deliveryGroups: (unitId: string) => ['units', unitId, 'delivery-groups'] as const,
+    wirUploads: (unitId: string) => ['units', unitId, 'wir-uploads'] as const,
   },
   delivery: {
     projects: (params: { page?: number; search?: string; perPage?: number }) =>
