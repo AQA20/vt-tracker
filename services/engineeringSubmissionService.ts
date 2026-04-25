@@ -1,4 +1,5 @@
 import api from './api'
+import { UnitImportResponse } from '@/types'
 
 export const getProjects = (params?: Record<string, unknown>) =>
   api.get('/projects', { params })
@@ -71,3 +72,14 @@ export const bulkCopyUnitStatus = (
   api.post(`/units/${sourceUnitId}/statuses/${category}/copy-to-units`, payload)
 
 export const deleteUnit = (id: string | number) => api.delete(`/units/${id}`)
+
+export const importProjectUnits = (projectId: string | number, file: File) => {
+  const formData = new FormData()
+  formData.append('file', file)
+
+  return api.post<UnitImportResponse>(`/projects/${projectId}/units/import`, formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })
+}

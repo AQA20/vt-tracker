@@ -197,6 +197,24 @@ export interface CreateUnitPayload {
   unit_description?: string
 }
 
+export interface UnitImportFailedRow {
+  row: number
+  equipment_number?: string | null
+  errors: string[]
+}
+
+export interface UnitImportSummary {
+  total_rows: number
+  successful_rows: number
+  failed_rows: number
+}
+
+export interface UnitImportResponse {
+  message: string
+  summary: UnitImportSummary
+  failed_rows: UnitImportFailedRow[]
+}
+
 export interface UpdateTaskPayload {
   status: string
   measurement?: number | null
